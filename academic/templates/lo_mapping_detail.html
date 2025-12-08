@@ -1,0 +1,78 @@
+{% extends 'base.html' %}
+
+{% block title %}PO Eşleştirme{% endblock %}
+
+{% block content %}
+<div class="row justify-content-center">
+    <div class="col-md-8">
+        
+        <div class="d-flex justify-content-between align-items-center mb-4">
+            <div>
+                <h4 class="fw-bold m-0 text-dark">🔗 LO -> PO Eşleştirme</h4>
+                <p class="text-muted m-0">Bu ders çıktısının hangi program hedefini desteklediğini belirleyin.</p>
+            </div>
+            <a href="{% url 'course_dashboard' lo.course.id %}" class="btn btn-outline-secondary">
+                <i class="fas fa-arrow-left me-1"></i> Ders Paneline Dön
+            </a>
+        </div>
+
+        <div class="alert alert-info border-0 shadow-sm d-flex align-items-center">
+            <div class="me-3">
+                <i class="fas fa-bullseye fa-2x"></i>
+            </div>
+            <div>
+                <h6 class="fw-bold mb-1">Seçilen Ders Çıktısı (LO):</h6>
+                <span class="badge bg-white text-info border border-info">{{ lo.code }}</span>
+                <span class="ms-2">{{ lo.description }}</span>
+            </div>
+        </div>
+
+        <div class="card border-0 shadow-sm mb-4">
+            <div class="card-header bg-white py-3 border-0">
+                <h6 class="fw-bold m-0 text-primary">Yeni Bağlantı Kur</h6>
+            </div>
+            <div class="card-body">
+                <form method="post">
+                    {% csrf_token %}
+                    <div class="mb-3">
+                        <label class="form-label fw-bold">Hedeflenen Program Çıktısı (PO)</label>
+                        {{ form.program_outcome }}
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label fw-bold">Katkı Oranı (0.0 - 1.0)</label>
+                        {{ form.weight }}
+                        <div class="form-text">Örnek: %50 etki için <strong>0.5</strong> giriniz.</div>
+                    </div>
+                    <button type="submit" class="btn btn-primary w-100">
+                        <i class="fas fa-link me-1"></i> Bağlantıyı Kaydet
+                    </button>
+                </form>
+            </div>
+        </div>
+
+        <div class="card border-0 shadow-sm">
+            <div class="card-header bg-white py-3 border-0">
+                <h6 class="fw-bold m-0 text-dark">Mevcut Bağlantılar</h6>
+            </div>
+            <ul class="list-group list-group-flush">
+                {% for m in mappings %}
+                <li class="list-group-item d-flex justify-content-between align-items-center py-3">
+                    <div>
+                        <span class="badge bg-dark me-2">{{ m.program_outcome.code }}</span>
+                        <small class="text-muted">{{ m.program_outcome.description|truncatechars:60 }}</small>
+                    </div>
+                    <div class="fw-bold text-success">
+                        Etki: {{ m.weight }}
+                    </div>
+                </li>
+                {% empty %}
+                <li class="list-group-item text-center text-muted py-4">
+                    Henüz bu çıktı bir PO ile eşleştirilmemiş.
+                </li>
+                {% endfor %}
+            </ul>
+        </div>
+
+    </div>
+</div>
+{% endblock %}

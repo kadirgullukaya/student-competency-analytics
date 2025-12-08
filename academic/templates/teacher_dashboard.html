@@ -1,0 +1,324 @@
+{% extends 'base.html' %}
+
+{% block title %}{{ active_course.code }} Yönetimi{% endblock %}
+
+{% block content %}
+
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <div>
+        <h2 class="fw-bold text-dark m-0">
+            <span class="text-primary">{{ active_course.code }}</span> - {{ active_course.name }}
+        </h2>
+        <span class="badge bg-light text-secondary border mt-1">
+            <i class="fas fa-user-tie me-1"></i> {{ user.username|title }}
+        </span>
+    </div>
+    <div class="d-flex gap-2">
+        <button class="btn btn-outline-primary shadow-sm" data-bs-toggle="modal" data-bs-target="#loModal">
+            <i class="fas fa-plus me-1"></i> LO Ekle
+        </button>
+        <button class="btn btn-primary shadow-sm" data-bs-toggle="modal" data-bs-target="#examModal">
+            <i class="fas fa-plus me-1"></i> Sınav Oluştur
+        </button>
+    </div>
+</div>
+
+<div class="row mb-4">
+    <div class="col-md-4">
+        <div class="card border-0 shadow-sm border-start border-4 border-info py-2">
+            <div class="card-body">
+                <div class="d-flex justify-content-between align-items-center">
+                    <div>
+                        <h6 class="text-muted small fw-bold text-uppercase">Sınıf Ortalaması</h6>
+                        <h2 class="mb-0 fw-bold text-dark">{{ stats.average }}</h2>
+                    </div>
+                    <div class="bg-info bg-opacity-10 text-info p-3 rounded-circle">
+                        <i class="fas fa-chart-line fa-lg"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-4">
+        <div class="card border-0 shadow-sm border-start border-4 border-success py-2">
+            <div class="card-body">
+                <div class="d-flex justify-content-between align-items-center">
+                    <div>
+                        <h6 class="text-muted small fw-bold text-uppercase">En Yüksek Not</h6>
+                        <h2 class="mb-0 fw-bold text-dark">{{ stats.max }}</h2>
+                    </div>
+                    <div class="bg-success bg-opacity-10 text-success p-3 rounded-circle">
+                        <i class="fas fa-trophy fa-lg"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-4">
+        <a href="{% url 'course_students' active_course.id %}" class="text-decoration-none">
+            <div class="card border-0 shadow-sm border-start border-4 border-warning py-2 hover-scale h-100">
+                <div class="card-body">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <div>
+                            <h6 class="text-muted small fw-bold text-uppercase">Öğrenci Sayısı</h6>
+                            <h2 class="mb-0 fw-bold text-dark">{{ stats.students }}</h2>
+                        </div>
+                        <div class="bg-warning bg-opacity-10 text-warning p-3 rounded-circle">
+                            <i class="fas fa-users fa-lg"></i>
+                        </div>
+                    </div>
+                    <div class="mt-2 small text-warning fw-bold text-end">
+                        Yönet <i class="fas fa-arrow-right ms-1"></i>
+                    </div>
+                </div>
+            </div>
+        </a>
+    </div>
+</div>
+
+<div class="row">
+    
+    <div class="col-lg-8">
+        
+        <div class="card border-0 shadow-sm mb-4">
+            <div class="card-header bg-white py-3 border-0">
+                <h5 class="fw-bold m-0 text-dark"><i class="fas fa-balance-scale me-2 text-primary"></i>Ders Performans Karşılaştırması</h5>
+            </div>
+            <div class="card-body">
+                <div style="height: 300px;">
+                    <canvas id="comparisonChart"></canvas>
+                </div>
+                <small class="text-muted d-block text-center mt-2">Verdiğiniz diğer derslerin genel ortalamaları ile karşılaştırma.</small>
+            </div>
+        </div>
+
+        <div class="card border-0 shadow-sm">
+            <div class="card-header bg-white py-3 border-0 d-flex justify-content-between align-items-center">
+                <h5 class="fw-bold m-0 text-dark"><i class="fas fa-clipboard-list me-2 text-warning"></i>Sınav Listesi</h5>
+            </div>
+            <div class="card-body p-0">
+                <div class="table-responsive">
+                    <table class="table table-hover align-middle mb-0">
+                        <thead class="table-light">
+                            <tr>
+                                <th class="ps-4">Sınav Adı</th>
+                                <th>Tarih</th>
+                                <th>İşlemler</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for exam in assessments %}
+                            <tr>
+                                <td class="ps-4">
+                                    <span class="fw-bold text-dark">{{ exam.name }}</span>
+                                    {% if exam.weight > 0 %}
+                                        <span class="badge bg-secondary bg-opacity-25 text-dark border ms-2">%{{ exam.weight }}</span>
+                                    {% endif %}
+                                </td>
+                                <td class="text-muted small">{{ exam.date|date:"d M Y" }}</td>
+                                <td>
+                                    <div class="btn-group">
+                                        <a href="{% url 'assessment_detail' exam.id %}" class="btn btn-sm btn-light text-primary" title="Ayarla"><i class="fas fa-cog"></i></a>
+                                        <a href="{% url 'enter_grades' exam.id %}" class="btn btn-sm btn-light text-success" title="Not Gir"><i class="fas fa-pen"></i></a>
+                                    </div>
+                                </td>
+                            </tr>
+                            {% empty %}
+                            <tr><td colspan="3" class="text-center py-4 text-muted">Henüz sınav yok.</td></tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+
+    </div>
+
+    <div class="col-lg-4">
+        
+        <div class="card border-0 shadow-sm mb-4">
+            <div class="card-header bg-white py-3 border-0">
+                <h6 class="fw-bold m-0"><i class="fas fa-chart-line me-2 text-success"></i>Sınav Başarı Trendi</h6>
+            </div>
+            <div class="card-body">
+                <div style="height: 150px;">
+                    <canvas id="trendChart"></canvas>
+                </div>
+            </div>
+        </div>
+
+        <div class="card border-0 shadow-sm mb-4 border-top border-4 border-danger">
+            <div class="card-header bg-white py-3 border-0">
+                <h6 class="fw-bold m-0 text-danger"><i class="fas fa-exclamation-triangle me-2"></i>Riskli Öğrenciler</h6>
+                <small class="text-muted" style="font-size: 11px;">Son sınavda 50 altı alanlar</small>
+            </div>
+            <ul class="list-group list-group-flush small">
+                {% for score in risky_students %}
+                <li class="list-group-item d-flex justify-content-between align-items-center">
+                    <span>{{ score.student.first_name }} {{ score.student.last_name }}</span>
+                    <span class="badge bg-danger rounded-pill">{{ score.score }}</span>
+                </li>
+                {% empty %}
+                <li class="list-group-item text-center text-muted py-3">
+                    <i class="fas fa-check-circle text-success me-1"></i> Riskli öğrenci yok.
+                </li>
+                {% endfor %}
+            </ul>
+        </div>
+
+        <div class="card border-0 shadow-sm">
+            <div class="card-header bg-white py-3 border-0">
+                <h6 class="fw-bold m-0 text-dark">Ders Çıktıları (LO)</h6>
+            </div>
+            <ul class="list-group list-group-flush small">
+                {% for lo in outcomes %}
+                <li class="list-group-item d-flex justify-content-between align-items-center">
+                    <div>
+                        <span class="fw-bold">{{ lo.code }}</span>
+                        <div class="text-muted" style="font-size: 10px;">{{ lo.description|truncatechars:25 }}</div>
+                    </div>
+                    <a href="{% url 'lo_mapping_detail' lo.id %}" class="text-decoration-none" title="PO Bağla">🔗</a>
+                </li>
+                {% endfor %}
+            </ul>
+        </div>
+
+    </div>
+</div>
+
+<div class="modal fade" id="loModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header bg-success text-white">
+                <h5 class="modal-title">Yeni LO Ekle</h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+            </div>
+            <form method="post">
+                <div class="modal-body">
+                    {% csrf_token %}
+                    <div class="mb-3">
+                        <label class="form-label fw-bold">LO Kodu</label>
+                        {{ lo_form.code }}
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label fw-bold">Açıklama</label>
+                        {{ lo_form.description }}
+                    </div>
+                    <div class="d-none">{{ lo_form.course }}</div>
+                </div>
+                <div class="modal-footer">
+                    <button type="submit" name="lo_submit" class="btn btn-success">Kaydet</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<div class="modal fade" id="examModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header bg-primary text-white">
+                <h5 class="modal-title">Yeni Sınav Oluştur</h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+            </div>
+            <form method="post">
+                <div class="modal-body">
+                    {% csrf_token %}
+                    <div class="mb-3">
+                        <label class="form-label fw-bold">Sınav Adı</label>
+                        {{ assessment_form.name }}
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label class="form-label fw-bold">Genel Ortalamaya Etkisi (%)</label>
+                        {{ assessment_form.weight }}
+                        <div class="form-text">Örnek: Vize için 30, Final için 50 giriniz.</div>
+                    </div>
+                    
+                    <div class="d-none">{{ assessment_form.course }}</div>
+                </div>
+                <div class="modal-footer">
+                    <button type="submit" name="assessment_submit" class="btn btn-primary">Oluştur</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    // JSON VERİLERİNİ GÜVENLİ ŞEKİLDE ALIYORUZ
+    const courseLabels = {{ graph_comparison_labels|safe }};
+    const courseData = {{ graph_comparison_data|safe }};
+    const examLabels = {{ graph_exams_labels|safe }};
+    const examData = {{ graph_exams_data|safe }};
+    
+    const activeCourseCode = "{{ active_course.code }}";
+    
+    const bgColors = courseLabels.map(code => 
+        code === activeCourseCode ? '#4f46e5' : '#e5e7eb'
+    );
+    const borderColors = courseLabels.map(code => 
+        code === activeCourseCode ? '#4f46e5' : '#9ca3af'
+    );
+
+    // 1. DERS KARŞILAŞTIRMA GRAFİĞİ
+    const ctxComp = document.getElementById('comparisonChart').getContext('2d');
+    new Chart(ctxComp, {
+        type: 'bar',
+        data: {
+            labels: courseLabels,
+            datasets: [{
+                label: 'Not Ortalaması',
+                data: courseData,
+                backgroundColor: bgColors,
+                borderColor: borderColors,
+                borderWidth: 1,
+                borderRadius: 5,
+                barPercentage: 0.6
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: { legend: { display: false } },
+            scales: { y: { beginAtZero: true, max: 100 } }
+        }
+    });
+
+    // 2. SINAV TREND GRAFİĞİ
+    const ctxTrend = document.getElementById('trendChart').getContext('2d');
+    let gradient = ctxTrend.createLinearGradient(0, 0, 0, 200);
+    gradient.addColorStop(0, 'rgba(16, 185, 129, 0.5)'); 
+    gradient.addColorStop(1, 'rgba(16, 185, 129, 0.0)');
+
+    new Chart(ctxTrend, {
+        type: 'line',
+        data: {
+            labels: examLabels,
+            datasets: [{
+                label: 'Ortalama',
+                data: examData,
+                borderColor: '#10b981',
+                backgroundColor: gradient,
+                fill: true,
+                tension: 0.4,
+                pointRadius: 3
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: { legend: { display: false } },
+            scales: { y: { display: false }, x: { display: false } }
+        }
+    });
+</script>
+{% endblock %}
+
+<style>
+    .hover-scale { transition: transform 0.2s; }
+    .hover-scale:hover { transform: translateY(-5px); cursor: pointer; }
+</style>

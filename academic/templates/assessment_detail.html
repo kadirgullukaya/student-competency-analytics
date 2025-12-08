@@ -1,0 +1,52 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+    <meta charset="UTF-8">
+    <title>{{ assessment.name }} Detayları</title>
+    <style>
+        body { font-family: sans-serif; background-color: #f4f6f9; padding: 20px; }
+        .container { max-width: 800px; margin: 0 auto; background: white; padding: 30px; border-radius: 8px; box-shadow: 0 2px 10px rgba(0,0,0,0.1); }
+        h1 { color: #2c3e50; border-bottom: 2px solid #eee; padding-bottom: 10px; }
+        .back-btn { display: inline-block; margin-bottom: 20px; text-decoration: none; color: #3498db; font-weight: bold; }
+        
+        /* Form */
+        .form-box { background: #ecf0f1; padding: 20px; border-radius: 8px; margin-bottom: 30px; }
+        button { background-color: #e67e22; color: white; border: none; padding: 10px 20px; border-radius: 4px; cursor: pointer; }
+        
+        /* Liste */
+        ul { list-style: none; padding: 0; }
+        ul li { background: #fff; border: 1px solid #ddd; padding: 10px; margin-bottom: 5px; display: flex; justify-content: space-between; }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <a href="{% url 'course_dashboard' assessment.course.id %}" class="back-btn">← Ders Paneline Dön</a>
+    
+    <h1>{{ assessment.course.code }} - {{ assessment.name }}</h1>
+    <p>Bu sınavın hangi çıktıları (LO) etkilediğini buradan ayarlayınız.</p>
+
+    <div class="form-box">
+        <h3>➕ Yeni Ağırlık Ekle</h3>
+        <form method="post">
+            {% csrf_token %}
+            {{ form.as_p }}
+            <button type="submit">Ağırlığı Ekle</button>
+        </form>
+    </div>
+
+    <h3>Tanımlı Ağırlıklar</h3>
+    <ul>
+        {% for w in weights %}
+            <li>
+                <span><strong>{{ w.learning_outcome.code }}</strong> ({{ w.learning_outcome.description|truncatechars:30 }})</span>
+                <span style="color: #e67e22; font-weight: bold;">%{{ w.percentage }}</span>
+            </li>
+        {% empty %}
+            <li style="color: #999;">Henüz bir ağırlık tanımlanmadı.</li>
+        {% endfor %}
+    </ul>
+</div>
+
+</body>
+</html>

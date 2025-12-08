@@ -1,0 +1,240 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{% block title %}Akademik OBS{% endblock %}</title>
+
+    <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🎓</text></svg>">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600&display=swap" rel="stylesheet">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+    <style>
+        :root {
+            --sidebar-bg: #2c3e50; /* Koyu Kurumsal Lacivert */
+            --sidebar-hover: #34495e;
+            --active-link: #3498db; /* Parlak Mavi */
+            --bg-color: #f3f4f6;
+        }
+
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: var(--bg-color);
+            overflow-x: hidden;
+            margin: 0;
+            padding: 0;
+        }
+
+        /* ANA İSKELET (LAYOUT) */
+        .wrapper {
+            display: flex;
+            width: 100%;
+            align-items: stretch;
+            min-height: 100vh;
+        }
+
+        /* 1. SOL MENÜ (SIDEBAR) TASARIMI */
+        #sidebar {
+            min-width: 260px;
+            max-width: 260px;
+            background: var(--sidebar-bg);
+            color: #fff;
+            transition: all 0.3s;
+        }
+        
+        #sidebar .sidebar-header {
+            padding: 20px;
+            background: #1a252f;
+            border-bottom: 1px solid #465a6e;
+        }
+
+        #sidebar ul.components {
+            padding: 20px 0;
+            border-bottom: 1px solid #47748b;
+        }
+
+        #sidebar ul li a {
+            padding: 15px 25px;
+            font-size: 15px;
+            display: block;
+            color: #bdc3c7;
+            text-decoration: none;
+            transition: 0.3s;
+            border-left: 4px solid transparent;
+        }
+
+        #sidebar ul li a:hover {
+            color: #fff;
+            background: var(--sidebar-hover);
+            border-left: 4px solid var(--active-link);
+        }
+
+        #sidebar ul li a.active {
+            color: #fff;
+            background: #2c3e50;
+            border-left: 4px solid var(--active-link);
+        }
+
+        #sidebar ul li a i {
+            margin-right: 10px;
+            width: 20px;
+            text-align: center;
+        }
+
+        /* 2. SAĞ TARAF (İÇERİK) TASARIMI */
+        #content {
+            width: 100%;
+            padding: 0;
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+        }
+
+        /* Üst Navbar (Header) */
+        .top-navbar {
+            background: #fff;
+            padding: 15px 30px;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.05);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        /* İçerik Kutusu */
+        .main-content {
+            padding: 30px;
+            flex: 1;
+        }
+
+        /* KARTLAR */
+        .card {
+            border: none;
+            border-radius: 8px;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+            margin-bottom: 20px;
+            background: #fff;
+        }
+        
+        .card-header {
+            background: white;
+            border-bottom: 1px solid #eee;
+            padding: 15px 20px;
+            font-weight: 600;
+            color: #2c3e50;
+        }
+
+        /* Inputlar */
+        .form-control {
+            border-radius: 6px;
+            padding: 10px;
+            border: 1px solid #dfe6e9;
+        }
+        .form-control:focus {
+            box-shadow: none;
+            border-color: var(--active-link);
+        }
+
+        /* Butonlar */
+        .btn { padding: 8px 16px; border-radius: 6px; }
+    </style>
+    {% block extra_css %}{% endblock %}
+</head>
+<body>
+
+<div class="wrapper">
+    <nav id="sidebar">
+        <div class="sidebar-header">
+            <h5 class="m-0"><i class="fas fa-university me-2"></i>Akademik OBS</h5>
+        </div>
+
+        <ul class="list-unstyled components">
+            <li>
+                <a href="{% url 'teacher_courses' %}" class="{% if request.resolver_match.url_name == 'teacher_courses' %}active{% endif %}">
+                    <i class="fas fa-home"></i> Ana Panel (Derslerim)
+                </a>
+            </li>
+            <li>
+                <a href="{% url 'teacher_courses' %}" class="{% if request.resolver_match.url_name == 'teacher_courses' %}active{% endif %}">
+                    <i class="fas fa-book"></i> Derslerim
+                </a>
+            </li>
+            <li>
+                <a href="{% url 'exam_list' %}" class="{% if request.resolver_match.url_name == 'exam_list' %}active{% endif %}">
+                    <i class="fas fa-clipboard-check"></i> Sınavlar & Notlar
+                </a>
+            </li>
+            <li>
+                <a href="#">
+                    <i class="fas fa-chart-pie"></i> PO Raporları
+                </a>
+            </li>
+            <li style="margin-top: 30px; border-top: 1px solid #34495e;">
+                <a href="#">
+                    <i class="fas fa-cog"></i> Ayarlar
+                </a>
+            </li>
+        </ul>
+    </nav>
+
+    <div id="content">
+        
+        <div class="top-navbar">
+            <div class="d-flex align-items-center">
+                <button type="button" id="sidebarCollapse" class="btn btn-light btn-sm me-3 border">
+                    <i class="fas fa-bars"></i>
+                </button>
+                <h5 class="m-0 text-secondary">{% block page_title %}Yönetim Paneli{% endblock %}</h5>
+            </div>
+
+            <div class="dropdown">
+                <a href="#" class="d-flex align-items-center text-decoration-none text-dark dropdown-toggle" id="dropdownUser1" data-bs-toggle="dropdown" aria-expanded="false">
+                    <div class="bg-primary text-white rounded-circle d-flex justify-content-center align-items-center me-2" style="width: 35px; height: 35px;">
+                        {{ user.username|first|upper }}
+                    </div>
+                    <span class="d-none d-sm-inline mx-1">{{ user.username|title }}</span>
+                </a>
+                <ul class="dropdown-menu dropdown-menu-end shadow border-0" aria-labelledby="dropdownUser1">
+                    <li><a class="dropdown-item" href="#">Profil</a></li>
+                    <li><hr class="dropdown-divider"></li>
+                    <li>
+                        <form action="{% url 'logout' %}" method="post">
+                            {% csrf_token %}
+                            <button type="submit" class="dropdown-item text-danger">Çıkış Yap</button>
+                        </form>
+                    </li>
+                </ul>
+            </div>
+        </div>
+
+        <div class="main-content">
+            {% if messages %}
+                {% for message in messages %}
+                    <div class="alert alert-{{ message.tags }} alert-dismissible fade show border-0 shadow-sm" role="alert">
+                        {{ message }}
+                        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+                    </div>
+                {% endfor %}
+            {% endif %}
+
+            {% block content %}
+            {% endblock %}
+        </div>
+
+    </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+
+<script>
+    document.getElementById('sidebarCollapse').addEventListener('click', function () {
+        document.getElementById('sidebar').style.marginLeft = 
+            document.getElementById('sidebar').style.marginLeft === '-260px' ? '0' : '-260px';
+    });
+</script>
+
+{% block extra_js %}{% endblock %}
+
+</body>
+</html>
