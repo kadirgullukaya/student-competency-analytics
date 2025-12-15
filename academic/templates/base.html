@@ -83,6 +83,16 @@
             text-align: center;
         }
 
+        /* Buton linkler (Çıkış vb.) */
+        #sidebar button.btn-link {
+            text-decoration: none;
+            color: #bdc3c7;
+            transition: 0.3s;
+        }
+        #sidebar button.btn-link:hover {
+            color: #fff;
+        }
+
         /* 2. SAĞ TARAF (İÇERİK) TASARIMI */
         #content {
             width: 100%;
@@ -150,30 +160,57 @@
         </div>
 
         <ul class="list-unstyled components">
+            
             <li>
-                <a href="{% url 'teacher_courses' %}" class="{% if request.resolver_match.url_name == 'teacher_courses' %}active{% endif %}">
-                    <i class="fas fa-home"></i> Ana Panel (Derslerim)
+                <a href="{% url 'home_redirect' %}" 
+                   class="{% if request.resolver_match.url_name == 'teacher_dashboard_home' or request.resolver_match.url_name == 'student_course_list' %}active{% endif %}">
+                    <i class="fas fa-home"></i> Ana Sayfa
                 </a>
             </li>
-            <li>
-                <a href="{% url 'teacher_courses' %}" class="{% if request.resolver_match.url_name == 'teacher_courses' %}active{% endif %}">
-                    <i class="fas fa-book"></i> Derslerim
-                </a>
-            </li>
-            <li>
-                <a href="{% url 'exam_list' %}" class="{% if request.resolver_match.url_name == 'exam_list' %}active{% endif %}">
-                    <i class="fas fa-clipboard-check"></i> Sınavlar & Notlar
-                </a>
-            </li>
-            <li>
-                <a href="#">
-                    <i class="fas fa-chart-pie"></i> PO Raporları
-                </a>
-            </li>
+
+            {% if user.is_superuser or user.groups.all.0.name == "Öğretmen" %}
+                <li>
+                    <a href="{% url 'teacher_courses' %}" class="{% if request.resolver_match.url_name == 'teacher_courses' %}active{% endif %}">
+                        <i class="fas fa-chalkboard-teacher"></i> Ders Yönetimi
+                    </a>
+                </li>
+                <li>
+                    <a href="{% url 'exam_list' %}" class="{% if request.resolver_match.url_name == 'exam_list' %}active{% endif %}">
+                        <i class="fas fa-clipboard-check"></i> Sınavlar & Notlar
+                    </a>
+                </li>
+                <li>
+                    <a href="#">
+                        <i class="fas fa-chart-pie"></i> PO Raporları
+                    </a>
+                </li>
+            
+            {% else %}
+                <li>
+                    <a href="{% url 'student_course_list' %}" class="{% if request.resolver_match.url_name == 'student_course_list' %}active{% endif %}">
+                        <i class="fas fa-book-reader"></i> Derslerim
+                    </a>
+                </li>
+                <li>
+                    <a href="{% url 'student_general_success' %}" class="{% if request.resolver_match.url_name == 'student_general_success' %}active{% endif %}">
+                        <i class="fas fa-chart-line"></i> Genel Başarım
+                    </a>
+                </li>
+            {% endif %}
+
             <li style="margin-top: 30px; border-top: 1px solid #34495e;">
                 <a href="#">
                     <i class="fas fa-cog"></i> Ayarlar
                 </a>
+            </li>
+            
+            <li>
+                <form action="{% url 'logout' %}" method="post" class="d-inline">
+                    {% csrf_token %}
+                    <button type="submit" class="btn btn-link text-decoration-none w-100 text-start ps-4 py-3">
+                        <i class="fas fa-sign-out-alt me-2"></i> Çıkış Yap
+                    </button>
+                </form>
             </li>
         </ul>
     </nav>
@@ -185,7 +222,7 @@
                 <button type="button" id="sidebarCollapse" class="btn btn-light btn-sm me-3 border">
                     <i class="fas fa-bars"></i>
                 </button>
-                <h5 class="m-0 text-secondary">{% block page_title %}Yönetim Paneli{% endblock %}</h5>
+                <h5 class="m-0 text-secondary">{% block page_title %}Panel{% endblock %}</h5>
             </div>
 
             <div class="dropdown">

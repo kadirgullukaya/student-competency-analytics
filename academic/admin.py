@@ -9,6 +9,7 @@ from .models import (
     Assessment,
     AssessmentWeight,
     StudentScore,
+    Enrollment,  # <-- Import'a eklendi
 )
 
 # Temel Modeller
@@ -16,6 +17,7 @@ admin.site.register(Semester)
 admin.site.register(Student)
 admin.site.register(Course)
 admin.site.register(ProgramOutcome)
+admin.site.register(Enrollment)  # <-- BURAYA EKLENDİ (Önemli!)
 
 
 # LO Yönetimi (İçinde Mapping ile beraber)
