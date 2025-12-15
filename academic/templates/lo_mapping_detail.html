@@ -57,13 +57,25 @@
             <ul class="list-group list-group-flush">
                 {% for m in mappings %}
                 <li class="list-group-item d-flex justify-content-between align-items-center py-3">
+                    
                     <div>
                         <span class="badge bg-dark me-2">{{ m.program_outcome.code }}</span>
                         <small class="text-muted">{{ m.program_outcome.description|truncatechars:60 }}</small>
                     </div>
-                    <div class="fw-bold text-success">
-                        Etki: {{ m.weight }}
+
+                    <div class="d-flex align-items-center">
+                        <span class="fw-bold text-success me-3">
+                            Etki: {{ m.weight }}
+                        </span>
+
+                        <form action="{% url 'delete_outcome_mapping' m.id %}" method="post" class="d-inline" onsubmit="return confirm('Bu eşleştirmeyi silmek istediğinize emin misiniz?');">
+                            {% csrf_token %}
+                            <button type="submit" class="btn btn-outline-danger btn-sm border-0" title="Eşleşmeyi Kaldır">
+                                <i class="fas fa-trash-alt"></i>
+                            </button>
+                        </form>
                     </div>
+
                 </li>
                 {% empty %}
                 <li class="list-group-item text-center text-muted py-4">

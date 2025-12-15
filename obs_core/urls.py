@@ -9,11 +9,8 @@ urlpatterns = [
     path("", auth_views.LoginView.as_view(), name="login"),
     path("logout/", auth_views.LogoutView.as_view(), name="logout"),
     # --- ANA MENÜLER (DASHBOARD) ---
-    # 1. Ana Panel (Genel İstatistikler) - EKSİKTİ, EKLENDİ
     path("dashboard/", views.teacher_dashboard_home, name="teacher_dashboard_home"),
-    # 2. Ders Listesi
     path("courses/", views.teacher_courses, name="teacher_courses"),
-    # 3. Tüm Sınavlar
     path("exams/", views.exam_list, name="exam_list"),
     # --- DERS DETAYLARI ---
     path(
@@ -21,7 +18,6 @@ urlpatterns = [
         views.course_dashboard,
         name="course_dashboard",
     ),
-    # --- ÖĞRENCİ YÖNETİMİ (Kritik Eksik Buydu!) ---
     path(
         "course/<int:course_id>/students/",
         views.course_students,
@@ -40,4 +36,23 @@ urlpatterns = [
     ),
     # --- PO EŞLEŞTİRME ---
     path("lo/<int:lo_id>/mapping/", views.lo_mapping_detail, name="lo_mapping_detail"),
+    # YENİ EKLENEN: EŞLEŞTİRME SİLME LİNKİ
+    path(
+        "mapping/<int:mapping_id>/delete/",
+        views.delete_outcome_mapping,
+        name="delete_outcome_mapping",
+    ),
+    # --- ÖĞRENCİ PANELİ VE YÖNLENDİRMELER ---
+    path("dashboard/redirect/", views.home_redirect, name="home_redirect"),
+    path(
+        "student/course/<int:course_id>/",
+        views.student_course_dashboard,
+        name="student_course_dashboard",
+    ),
+    path("student/courses/", views.student_course_list, name="student_course_list"),
+    path(
+        "student/general-success/",
+        views.student_general_success,
+        name="student_general_success",
+    ),
 ]

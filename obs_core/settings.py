@@ -109,8 +109,8 @@ STATIC_URL = "static/"
 
 DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
 
-# Giriş başarılı olursa Dashboard'a git
-LOGIN_REDIRECT_URL = "teacher_courses"
+# Giriş yapan kişiyi kimliğine göre yönlendiren fonksiyona yolla
+LOGIN_REDIRECT_URL = "home_redirect"
 
 # Çıkış yaparsa tekrar Login ekranına dön
 LOGOUT_REDIRECT_URL = "login"
