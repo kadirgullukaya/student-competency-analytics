@@ -1,0 +1,50 @@
+{% extends 'base.html' %}
+
+{% block title %}Öğrenci Yönetimi{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h3 class="fw-bold text-dark"><i class="fas fa-user-graduate me-2"></i>Öğrenci Listesi</h3>
+    <a href="{% url 'add_student' %}" class="btn btn-primary">
+        <i class="fas fa-plus"></i> Yeni Öğrenci Ekle
+    </a>
+</div>
+
+<div class="card shadow-sm border-0">
+    <div class="card-body">
+        <div class="table-responsive">
+            <table class="table table-hover align-middle">
+                <thead class="table-light">
+                    <tr>
+                        <th>Öğr. No (Kullanıcı Adı)</th>
+                        <th>Ad Soyad</th>
+                        <th>E-Posta</th>
+                        <th class="text-end">İşlemler</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for student in students %}
+                    <tr>
+                        <td><span class="badge bg-secondary">{{ student.student_number }}</span></td>
+                        <td>{{ student.user.first_name }} {{ student.user.last_name }}</td>
+                        <td>{{ student.user.email }}</td>
+                        <td class="text-end">
+                            <form action="{% url 'delete_student' student.id %}" method="post" class="d-inline" onsubmit="return confirm('UYARI: Bu öğrenciyi silerseniz tüm notları ve kayıtları da silinir. Emin misiniz?');">
+                                {% csrf_token %}
+                                <button class="btn btn-sm btn-outline-danger">
+                                    <i class="fas fa-trash-alt"></i> Sil
+                                </button>
+                            </form>
+                        </td>
+                    </tr>
+                    {% empty %}
+                    <tr>
+                        <td colspan="4" class="text-center text-muted py-4">Sistemde kayıtlı öğrenci yok.</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+{% endblock %}
