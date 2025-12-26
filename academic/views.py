@@ -2,6 +2,7 @@ import json
 from django.shortcuts import render, redirect, get_object_or_404
 from django.contrib.auth.decorators import login_required, user_passes_test
 from django.db.models import Avg, Max, Count
+from django.contrib import messages  # İşlem mesajları için
 from .models import (
     Course,
     LearningOutcome,
@@ -12,6 +13,7 @@ from .models import (
     StudentScore,
     OutcomeMapping,
     Enrollment,
+    Semester,  # Yeni eklendi
 )
 from .forms import (
     LearningOutcomeForm,
@@ -19,23 +21,43 @@ from .forms import (
     AssessmentWeightForm,
     OutcomeMappingForm,
     EnrollmentForm,
+    # YENİ EKLENEN FORMLAR
+    StudentCreationForm,
+    CourseForm,
+    SemesterForm,
+    ProgramOutcomeForm,
 )
+
+# --- YETKİ KONTROLLERİ ---
 
 
 def is_teacher(user):
-    return user.groups.filter(name="Öğretmen").exists() or user.is_superuser
+    # Hem "Öğretmen" hem de "Bölüm Başkanı" öğretmen paneline girebilir
+    return (
+        user.groups.filter(name__in=["Öğretmen", "Bölüm Başkanı"]).exists()
+        or user.is_superuser
+    )
+
+
+def is_department_head(user):
+    # Sadece Bölüm Başkanı (veya Superuser) girebilir
+    return user.groups.filter(name="Bölüm Başkanı").exists() or user.is_superuser
 
 
 # --- 1. ANA PANEL (GENEL BAKIŞ) ---
 @login_required
 @user_passes_test(is_teacher)
 def teacher_dashboard_home(request):
-    my_courses = Course.objects.filter(teacher=request.user)
-    if not my_courses.exists() and request.user.is_superuser:
+    # Eğer Bölüm Başkanı ise TÜM dersleri görsün, değilse sadece kendi dersleri
+    if is_department_head(request.user):
         my_courses = Course.objects.all()
+    else:
+        my_courses = Course.objects.filter(teacher=request.user)
+        if not my_courses.exists() and request.user.is_superuser:
+            my_courses = Course.objects.all()
 
     total_courses = my_courses.count()
-    total_students = Enrollment.objects.filter(course__in=my_courses).count()
+    total_students = Enrollment.objects.filter(course__in=my_courses).distinct().count()
     total_exams = Assessment.objects.filter(course__in=my_courses).count()
     recent_exams = Assessment.objects.filter(course__in=my_courses).order_by("-date")[
         :5
@@ -57,21 +79,13 @@ def teacher_dashboard_home(request):
 @login_required
 @user_passes_test(is_teacher)
 def teacher_courses(request):
-    my_courses = Course.objects.filter(teacher=request.user)
-    if not my_courses.exists() and request.user.is_superuser:
+    if is_department_head(request.user):
         my_courses = Course.objects.all()
-
-    total_courses = my_courses.count()
-    total_students = Enrollment.objects.filter(course__in=my_courses).count()
-    total_exams = Assessment.objects.filter(course__in=my_courses).count()
+    else:
+        my_courses = Course.objects.filter(teacher=request.user)
 
     context = {
         "courses": my_courses,
-        "stats": {
-            "total_courses": total_courses,
-            "total_students": total_students,
-            "total_exams": total_exams,
-        },
     }
     return render(request, "teacher_courses.html", context)
 
@@ -81,6 +95,15 @@ def teacher_courses(request):
 @user_passes_test(is_teacher)
 def course_dashboard(request, course_id):
     course = get_object_or_404(Course, id=course_id)
+
+    # Güvenlik: Başka hocanın dersine girmeye çalışırsa engelle (Bölüm Başkanı hariç)
+    if (
+        not is_department_head(request.user)
+        and course.teacher != request.user
+        and not request.user.is_superuser
+    ):
+        return redirect("teacher_dashboard_home")
+
     lo_form = LearningOutcomeForm(initial={"course": course})
     assessment_form = AssessmentForm(initial={"course": course})
 
@@ -103,6 +126,7 @@ def course_dashboard(request, course_id):
     outcomes = LearningOutcome.objects.filter(course=course)
     assessments = Assessment.objects.filter(course=course).order_by("-date")
 
+    # İstatistikler
     course_average = (
         StudentScore.objects.filter(assessment__course=course).aggregate(Avg("score"))[
             "score__avg"
@@ -117,14 +141,17 @@ def course_dashboard(request, course_id):
     )
     total_students = Enrollment.objects.filter(course=course).count()
 
-    # --- GRAFİK VERİLERİ (JSON DÖNÜŞÜMÜ - float() EKLENDİ) ---
-    teacher_courses = Course.objects.filter(teacher=request.user)
-    if not teacher_courses.exists() and request.user.is_superuser:
-        teacher_courses = Course.objects.all()
+    # Grafik Verileri
+    # Sınıf Ortalamaları Karşılaştırması
+    all_courses = (
+        Course.objects.all()
+        if is_department_head(request.user)
+        else Course.objects.filter(teacher=request.user)
+    )
 
     course_labels = []
     course_data = []
-    for c in teacher_courses:
+    for c in all_courses:
         avg = (
             StudentScore.objects.filter(assessment__course=c).aggregate(Avg("score"))[
                 "score__avg"
@@ -134,6 +161,7 @@ def course_dashboard(request, course_id):
         course_labels.append(c.code)
         course_data.append(float(round(avg, 1)))
 
+    # Sınav Başarı Grafiği
     exam_labels = []
     exam_data = []
     for exam in assessments.reverse():
@@ -173,7 +201,141 @@ def course_dashboard(request, course_id):
     return render(request, "teacher_dashboard.html", context)
 
 
-# --- DİĞER FONKSİYONLAR ---
+# --- BÖLÜM BAŞKANI YÖNETİM FONKSİYONLARI (YENİ) ---
+
+
+# A. ÖĞRENCİ YÖNETİMİ
+@login_required
+@user_passes_test(is_department_head)
+def manage_students(request):
+    students = Student.objects.all().select_related("user").order_by("student_number")
+    return render(request, "manage_students.html", {"students": students})
+
+
+@login_required
+@user_passes_test(is_department_head)
+def add_student(request):
+    if request.method == "POST":
+        form = StudentCreationForm(request.POST)
+        if form.is_valid():
+            form.save()
+            messages.success(request, "Öğrenci başarıyla eklendi.")
+            return redirect("manage_students")
+    else:
+        form = StudentCreationForm()
+    return render(request, "add_student.html", {"form": form})
+
+
+@login_required
+@user_passes_test(is_department_head)
+def delete_student(request, student_id):
+    student = get_object_or_404(Student, id=student_id)
+    if request.method == "POST":
+        user = student.user
+        user.delete()  # User silinince Student da silinir (Cascade)
+        messages.success(request, "Öğrenci ve ilişkili veriler silindi.")
+    return redirect("manage_students")
+
+
+# B. DERS YÖNETİMİ
+@login_required
+@user_passes_test(is_department_head)
+def manage_courses(request):
+    courses = Course.objects.all().select_related("teacher", "semester")
+    return render(request, "manage_courses.html", {"courses": courses})
+
+
+@login_required
+@user_passes_test(is_department_head)
+def add_course(request):
+    if request.method == "POST":
+        form = CourseForm(request.POST)
+        if form.is_valid():
+            form.save()
+            messages.success(request, "Ders başarıyla oluşturuldu.")
+            return redirect("manage_courses")
+    else:
+        form = CourseForm()
+    return render(request, "add_course.html", {"form": form})
+
+
+@login_required
+@user_passes_test(is_department_head)
+def delete_course(request, course_id):
+    course = get_object_or_404(Course, id=course_id)
+    if request.method == "POST":
+        course.delete()
+        messages.success(request, "Ders silindi.")
+    return redirect("manage_courses")
+
+
+# C. DÖNEM YÖNETİMİ
+@login_required
+@user_passes_test(is_department_head)
+def manage_semesters(request):
+    semesters = Semester.objects.all().order_by("-year")
+    return render(request, "manage_semesters.html", {"semesters": semesters})
+
+
+@login_required
+@user_passes_test(is_department_head)
+def add_semester(request):
+    if request.method == "POST":
+        form = SemesterForm(request.POST)
+        if form.is_valid():
+            form.save()
+            messages.success(request, "Dönem başarıyla eklendi.")
+            return redirect("manage_semesters")
+    else:
+        form = SemesterForm()
+    return render(request, "add_semester.html", {"form": form})
+
+
+@login_required
+@user_passes_test(is_department_head)
+def delete_semester(request, semester_id):
+    semester = get_object_or_404(Semester, id=semester_id)
+    if request.method == "POST":
+        semester.delete()
+        messages.success(request, "Dönem silindi.")
+    return redirect("manage_semesters")
+
+
+# D. PO (PROGRAM ÇIKTISI) YÖNETİMİ
+@login_required
+@user_passes_test(is_department_head)
+def manage_program_outcomes(request):
+    pos = ProgramOutcome.objects.all().order_by("code")
+    return render(request, "manage_program_outcomes.html", {"pos": pos})
+
+
+@login_required
+@user_passes_test(is_department_head)
+def add_program_outcome(request):
+    if request.method == "POST":
+        form = ProgramOutcomeForm(request.POST)
+        if form.is_valid():
+            form.save()
+            messages.success(request, "Program Çıktısı (PO) eklendi.")
+            return redirect("manage_program_outcomes")
+    else:
+        form = ProgramOutcomeForm()
+    return render(request, "add_program_outcome.html", {"form": form})
+
+
+@login_required
+@user_passes_test(is_department_head)
+def delete_program_outcome(request, po_id):
+    po = get_object_or_404(ProgramOutcome, id=po_id)
+    if request.method == "POST":
+        po.delete()
+        messages.success(request, "PO silindi.")
+    return redirect("manage_program_outcomes")
+
+
+# --- DİĞER MEVCUT FONKSİYONLAR ---
+
+
 @login_required
 @user_passes_test(is_teacher)
 def course_students(request, course_id):
@@ -198,10 +360,10 @@ def course_students(request, course_id):
 @login_required
 @user_passes_test(is_teacher)
 def exam_list(request):
-    my_courses = Course.objects.filter(teacher=request.user)
-    if not my_courses.exists() and request.user.is_superuser:
+    if is_department_head(request.user):
         assessments = Assessment.objects.all().order_by("-date")
     else:
+        my_courses = Course.objects.filter(teacher=request.user)
         assessments = Assessment.objects.filter(course__in=my_courses).order_by("-date")
     return render(request, "exam_list.html", {"assessments": assessments})
 
@@ -276,31 +438,35 @@ def lo_mapping_detail(request, lo_id):
     )
 
 
-# --- 9. ÖĞRENCİ DASHBOARD (GÜNCELLENMİŞ VERSİYON) ---
+@login_required
+@user_passes_test(is_teacher)
+def delete_outcome_mapping(request, mapping_id):
+    mapping = get_object_or_404(OutcomeMapping, id=mapping_id)
+    lo_id = mapping.learning_outcome.id
+    if request.method == "POST":
+        mapping.delete()
+    return redirect("lo_mapping_detail", lo_id=lo_id)
+
+
+# --- ÖĞRENCİ PANELİ VE YÖNLENDİRİCİLER ---
+
+
 @login_required
 def student_course_dashboard(request, course_id):
-    # Güvenlik Kontrolü
     if not hasattr(request.user, "student"):
         return redirect("teacher_dashboard_home")
-
     course = get_object_or_404(Course, id=course_id)
     student = request.user.student
-
-    # 1. GENEL NOT HESABI
     assessments = Assessment.objects.filter(course=course)
     total_weight = 0
     weighted_sum = 0
-
     student_scores = StudentScore.objects.filter(
         student=student, assessment__in=assessments
     )
     score_map = {s.assessment.id: s.score for s in student_scores}
-
-    # Grafik Verileri
     exam_labels = []
     my_scores = []
     class_averages = []
-
     for exam in assessments:
         exam_labels.append(exam.name)
         if exam.id in score_map:
@@ -310,32 +476,20 @@ def student_course_dashboard(request, course_id):
             total_weight += exam.weight
         else:
             my_scores.append(0)
-
-        # Sınıf Ortalaması
         avg_score = StudentScore.objects.filter(assessment=exam).aggregate(
             Avg("score")
         )["score__avg"]
-        if avg_score:
-            class_averages.append(float(round(avg_score, 1)))
-        else:
-            class_averages.append(0)
-
+        class_averages.append(float(round(avg_score, 1)) if avg_score else 0)
     current_average = round(weighted_sum / total_weight, 2) if total_weight > 0 else 0
-
-    # 2. LO (DERS ÇIKTISI) DETAYLI HESAP
     learning_outcomes = LearningOutcome.objects.filter(course=course)
-
     lo_labels = []
     lo_data = []
     lo_details = []
-
     for lo in learning_outcomes:
         lo_labels.append(f"{lo.code}")
-
         relevant_weights = AssessmentWeight.objects.filter(learning_outcome=lo)
         lo_total_score = 0
         lo_max_possible = 0
-
         for aw in relevant_weights:
             exam = aw.assessment
             if exam.id in score_map:
@@ -343,21 +497,15 @@ def student_course_dashboard(request, course_id):
                 effect = float(aw.percentage)
                 lo_total_score += student_exam_score * effect
                 lo_max_possible += 100 * effect
-
         final_success = 0
         if lo_max_possible > 0:
             final_success = float(round((lo_total_score / lo_max_possible) * 100, 1))
-
-        # Grafik için veri
         lo_data.append(final_success)
-
-        # HTML Listesi için veri
-        color_class = "success"  # Yeşil
-        if final_success < 50:
-            color_class = "danger"  # Kırmızı
-        elif final_success < 70:
-            color_class = "warning"  # Sarı
-
+        color_class = (
+            "success"
+            if final_success >= 70
+            else "warning" if final_success >= 50 else "danger"
+        )
         lo_details.append(
             {
                 "code": lo.code,
@@ -366,7 +514,6 @@ def student_course_dashboard(request, course_id):
                 "color": color_class,
             }
         )
-
     context = {
         "course": course,
         "student": student,
@@ -383,111 +530,85 @@ def student_course_dashboard(request, course_id):
     return render(request, "student_dashboard.html", context)
 
 
-# --- 10. GİRİŞ YÖNLENDİRİCİSİ (TRAFİK POLİSİ) ---
 @login_required
 def home_redirect(request):
-    if (
-        request.user.groups.filter(name="Öğretmen").exists()
-        or request.user.is_superuser
-    ):
+    # 1. Bölüm Başkanı -> Öğretmen Paneline (Ama yetkileri fazla olacak)
+    if is_department_head(request.user):
         return redirect("teacher_dashboard_home")
 
+    # 2. Öğretmen -> Öğretmen Paneline
+    if request.user.groups.filter(name="Öğretmen").exists():
+        return redirect("teacher_dashboard_home")
+
+    # 3. Öğrenci -> Ders Listesine
     elif hasattr(request.user, "student"):
         return redirect("student_course_list")
 
     return redirect("login")
 
 
-# --- 11. ÖĞRENCİ DERS LİSTESİ (ANA SAYFA) ---
 @login_required
 def student_course_list(request):
     if not hasattr(request.user, "student"):
         return redirect("teacher_dashboard_home")
-
     student = request.user.student
     enrollments = Enrollment.objects.filter(student=student)
-
-    context = {"enrollments": enrollments}
-    return render(request, "student_course_list.html", context)
+    return render(request, "student_course_list.html", {"enrollments": enrollments})
 
 
-# --- 12. GENEL BAŞARIM (PO ANALİZİ) - AĞIRLIKLI HESAPLAMA ---
 @login_required
 def student_general_success(request):
     if not hasattr(request.user, "student"):
         return redirect("teacher_dashboard_home")
-
     student = request.user.student
-
-    # 1. PO HAVUZLARINI HAZIRLA
     all_pos = ProgramOutcome.objects.all()
     po_buckets = {
         po.code: {"earned": 0, "max": 0, "desc": po.description} for po in all_pos
     }
-
-    # 2. ÖĞRENCİNİN TÜM DERSLERİNİ GEZ
     enrollments = Enrollment.objects.filter(student=student)
-
     for enrollment in enrollments:
         course = enrollment.course
-
-        # --- A. LO BAŞARISINI HESAPLA ---
         assessments = Assessment.objects.filter(course=course)
         student_scores = StudentScore.objects.filter(
             student=student, assessment__in=assessments
         )
         score_map = {s.assessment.id: s.score for s in student_scores}
-
         learning_outcomes = LearningOutcome.objects.filter(course=course)
-
         for lo in learning_outcomes:
             relevant_weights = AssessmentWeight.objects.filter(learning_outcome=lo)
             lo_total = 0
             lo_max_possible = 0
-
             for aw in relevant_weights:
                 if aw.assessment.id in score_map:
                     lo_total += float(score_map[aw.assessment.id]) * float(
                         aw.percentage
                     )
                     lo_max_possible += 100 * float(aw.percentage)
-
             lo_success_rate = 0
             if lo_max_possible > 0:
                 lo_success_rate = (lo_total / lo_max_possible) * 100
-
-            # --- B. PO HESABI ---
             mappings = OutcomeMapping.objects.filter(learning_outcome=lo)
-
             for mapping in mappings:
                 po_code = mapping.program_outcome.code
                 weight = float(mapping.weight)
-
                 contribution = lo_success_rate * weight
                 max_contribution = 100 * weight
-
                 po_buckets[po_code]["earned"] += contribution
                 po_buckets[po_code]["max"] += max_contribution
-
-    # 3. SONUÇLARI GRAFİK İÇİN HAZIRLA
     po_labels = []
     po_scores = []
     po_details = []
-
     for code, data in po_buckets.items():
         final_score = 0
         if data["max"] > 0:
             final_score = round((data["earned"] / data["max"]) * 100, 1)
-
         po_labels.append(code)
         po_scores.append(final_score)
-
         color = (
             "success"
             if final_score >= 70
             else "warning" if final_score >= 50 else "danger"
         )
-
         po_details.append(
             {
                 "code": code,
@@ -496,7 +617,6 @@ def student_general_success(request):
                 "color": color,
             }
         )
-
     context = {
         "student": student,
         "po_labels": json.dumps(po_labels),
@@ -504,19 +624,3 @@ def student_general_success(request):
         "po_details": po_details,
     }
     return render(request, "student_general_success.html", context)
-
-
-# --- 13. EŞLEŞTİRME SİLME (YENİ EKLENEN) ---
-@login_required
-@user_passes_test(is_teacher)
-def delete_outcome_mapping(request, mapping_id):
-    # Silinecek eşleştirmeyi bul
-    mapping = get_object_or_404(OutcomeMapping, id=mapping_id)
-
-    # Silindikten sonra geri döneceğimiz LO sayfasının ID'sini sakla
-    lo_id = mapping.learning_outcome.id
-
-    if request.method == "POST":
-        mapping.delete()
-
-    return redirect("lo_mapping_detail", lo_id=lo_id)

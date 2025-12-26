@@ -1,4 +1,5 @@
 from django import forms
+from django.contrib.auth.models import User  # User modeli eklendi
 from .models import (
     LearningOutcome,
     ProgramOutcome,
@@ -6,7 +7,86 @@ from .models import (
     AssessmentWeight,
     OutcomeMapping,
     Enrollment,
+    Student,  # Yeni eklendi
+    Course,  # Yeni eklendi
+    Semester,  # Yeni eklendi
 )
+
+# --- BÖLÜM BAŞKANI İÇİN YENİ FORMLAR (YÖNETİM) ---
+
+
+# A. ÖĞRENCİ OLUŞTURMA FORMU (User + Student birleşik)
+class StudentCreationForm(forms.ModelForm):
+    first_name = forms.CharField(label="Ad", max_length=30)
+    last_name = forms.CharField(label="Soyad", max_length=30)
+    email = forms.EmailField(label="E-posta", required=True)
+    student_number = forms.CharField(label="Öğrenci Numarası", max_length=20)
+    password = forms.CharField(label="Şifre", widget=forms.PasswordInput)
+
+    class Meta:
+        model = User
+        fields = ["first_name", "last_name", "email", "password"]
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        for field in self.fields:
+            self.fields[field].widget.attrs.update({"class": "form-control"})
+
+    def save(self, commit=True):
+        # 1. Önce Django User oluştur
+        user = super().save(commit=False)
+        # Kullanıcı adı olarak öğrenci numarasını kullanıyoruz (Benzersiz olması için)
+        user.username = self.cleaned_data["student_number"]
+        user.set_password(self.cleaned_data["password"])
+
+        if commit:
+            user.save()
+            # 2. Sonra Student profilini oluştur ve bağla
+            Student.objects.create(
+                user=user, student_number=self.cleaned_data["student_number"]
+            )
+        return user
+
+
+# B. DERS EKLEME FORMU
+class CourseForm(forms.ModelForm):
+    class Meta:
+        model = Course
+        fields = ["name", "code", "semester", "teacher"]
+        labels = {
+            "name": "Ders Adı",
+            "code": "Ders Kodu",
+            "semester": "Dönem",
+            "teacher": "Dersi Veren Öğretmen",
+        }
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        for field in self.fields:
+            self.fields[field].widget.attrs.update({"class": "form-control"})
+            # Teacher ve Semester seçimleri için select class'ı
+            if field in ["semester", "teacher"]:
+                self.fields[field].widget.attrs.update({"class": "form-select"})
+
+
+# C. DÖNEM EKLEME FORMU
+class SemesterForm(forms.ModelForm):
+    class Meta:
+        model = Semester
+        fields = ["name", "year", "term"]
+        labels = {
+            "name": "Dönem Adı (Örn: 2024-2025 Güz)",
+            "year": "Yıl",
+            "term": "Dönem Tipi (Fall/Spring)",
+        }
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        for field in self.fields:
+            self.fields[field].widget.attrs.update({"class": "form-control"})
+
+
+# --- MEVCUT FORMLAR (Aynen Korundu) ---
 
 
 # 1. LO EKLEME FORMU
@@ -49,16 +129,15 @@ class ProgramOutcomeForm(forms.ModelForm):
             )
 
 
-# 3. SINAV OLUŞTURMA FORMU (GÜNCELLENDİ)
+# 3. SINAV OLUŞTURMA FORMU
 class AssessmentForm(forms.ModelForm):
     class Meta:
         model = Assessment
-        # 'weight' alanını buraya ekledik
         fields = ["course", "name", "weight"]
         labels = {
             "course": "Ders Seçin",
             "name": "Sınav Adı (Örn: Vize 1, Final)",
-            "weight": "Etki Oranı (%)",  # Yeni alanın etiketi
+            "weight": "Etki Oranı (%)",
         }
 
     def __init__(self, *args, **kwargs):
@@ -105,7 +184,7 @@ class OutcomeMappingForm(forms.ModelForm):
             )
 
 
-# 6. ÖĞRENCİ EKLEME (ENROLLMENT) FORMU
+# 6. ÖĞRENCİ EKLEME (ENROLLMENT) FORMU (Ders Kaydı)
 class EnrollmentForm(forms.ModelForm):
     class Meta:
         model = Enrollment
