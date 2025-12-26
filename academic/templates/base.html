@@ -1,3 +1,7 @@
+base.html :
+
+
+
 <!DOCTYPE html>
 <html lang="tr">
 <head>
@@ -168,7 +172,7 @@
                 </a>
             </li>
 
-            {% if user.is_superuser or user.groups.all.0.name == "Öğretmen" %}
+            {% if user.is_superuser or user.groups.all.0.name == "Öğretmen" or user.groups.all.0.name == "Bölüm Başkanı" %}
                 <li>
                     <a href="{% url 'teacher_courses' %}" class="{% if request.resolver_match.url_name == 'teacher_courses' %}active{% endif %}">
                         <i class="fas fa-chalkboard-teacher"></i> Ders Yönetimi
@@ -184,6 +188,28 @@
                         <i class="fas fa-chart-pie"></i> PO Raporları
                     </a>
                 </li>
+
+                {% if user.groups.all.0.name == "Bölüm Başkanı" or user.is_superuser %}
+                <li style="border-top: 1px solid #47748b; margin-top: 15px; padding-top: 15px;">
+                    <div class="small text-uppercase text-light opacity-50 px-4 mb-2" style="font-size: 0.7rem; letter-spacing: 1px;">BÖLÜM YÖNETİMİ</div>
+                    
+                    <a href="{% url 'manage_students' %}" class="{% if 'student' in request.path and 'department' in request.path %}active{% endif %}">
+                        <i class="fas fa-user-graduate"></i> Öğrenci İşlemleri
+                    </a>
+                    
+                    <a href="{% url 'manage_courses' %}" class="{% if 'department/courses' in request.path %}active{% endif %}">
+                        <i class="fas fa-book"></i> Ders Aç/Kapat
+                    </a>
+
+                    <a href="{% url 'manage_semesters' %}" class="{% if 'semester' in request.path %}active{% endif %}">
+                        <i class="fas fa-calendar-alt"></i> Dönem Ayarları
+                    </a>
+
+                     <a href="{% url 'manage_program_outcomes' %}" class="{% if 'department/pos' in request.path %}active{% endif %}">
+                        <i class="fas fa-bullseye"></i> PO Tanımları
+                    </a>
+                </li>
+                {% endif %}
             
             {% else %}
                 <li>
