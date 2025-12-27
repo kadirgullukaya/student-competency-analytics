@@ -1,8 +1,9 @@
 import json
 from django.shortcuts import render, redirect, get_object_or_404
 from django.contrib.auth.decorators import login_required, user_passes_test
+from django.contrib.auth import logout
 from django.db.models import Avg, Max, Count
-from django.contrib import messages  # İşlem mesajları için
+from django.contrib import messages
 from .models import (
     Course,
     LearningOutcome,
@@ -13,7 +14,7 @@ from .models import (
     StudentScore,
     OutcomeMapping,
     Enrollment,
-    Semester,  # Yeni eklendi
+    Semester,
 )
 from .forms import (
     LearningOutcomeForm,
@@ -21,12 +22,12 @@ from .forms import (
     AssessmentWeightForm,
     OutcomeMappingForm,
     EnrollmentForm,
-    # YENİ EKLENEN FORMLAR
     StudentCreationForm,
     CourseForm,
     SemesterForm,
     ProgramOutcomeForm,
 )
+
 
 # --- YETKİ KONTROLLERİ ---
 
@@ -142,7 +143,6 @@ def course_dashboard(request, course_id):
     total_students = Enrollment.objects.filter(course=course).count()
 
     # Grafik Verileri
-    # Sınıf Ortalamaları Karşılaştırması
     all_courses = (
         Course.objects.all()
         if is_department_head(request.user)
@@ -161,7 +161,6 @@ def course_dashboard(request, course_id):
         course_labels.append(c.code)
         course_data.append(float(round(avg, 1)))
 
-    # Sınav Başarı Grafiği
     exam_labels = []
     exam_data = []
     for exam in assessments.reverse():
@@ -204,11 +203,22 @@ def course_dashboard(request, course_id):
 # --- BÖLÜM BAŞKANI YÖNETİM FONKSİYONLARI (YENİ) ---
 
 
+# 🔥 YENİ EKLENEN: BÖLÜM BAŞKANI ANA MENÜSÜ
+@login_required
+@user_passes_test(is_department_head)
+def department_head_dashboard(request):
+    """
+    Bölüm Başkanı için ana menü.
+    Buradan Ders Yönetimi, Öğrenci Yönetimi gibi sayfalara gidecek.
+    """
+    return render(request, "department_head_dashboard.html")
+
+
 # A. ÖĞRENCİ YÖNETİMİ
 @login_required
 @user_passes_test(is_department_head)
 def manage_students(request):
-    students = Student.objects.all().select_related("user").order_by("student_number")
+    students = Student.objects.all().select_related("user").order_by("student_id")
     return render(request, "manage_students.html", {"students": students})
 
 
@@ -232,7 +242,7 @@ def delete_student(request, student_id):
     student = get_object_or_404(Student, id=student_id)
     if request.method == "POST":
         user = student.user
-        user.delete()  # User silinince Student da silinir (Cascade)
+        user.delete()
         messages.success(request, "Öğrenci ve ilişkili veriler silindi.")
     return redirect("manage_students")
 
@@ -273,7 +283,7 @@ def delete_course(request, course_id):
 @login_required
 @user_passes_test(is_department_head)
 def manage_semesters(request):
-    semesters = Semester.objects.all().order_by("-year")
+    semesters = Semester.objects.all().order_by("name")
     return render(request, "manage_semesters.html", {"semesters": semesters})
 
 
@@ -448,7 +458,7 @@ def delete_outcome_mapping(request, mapping_id):
     return redirect("lo_mapping_detail", lo_id=lo_id)
 
 
-# --- ÖĞRENCİ PANELİ VE YÖNLENDİRİCİLER ---
+# --- ÖĞRENCİ PANELİ ---
 
 
 @login_required
@@ -510,6 +520,7 @@ def student_course_dashboard(request, course_id):
             {
                 "code": lo.code,
                 "description": lo.description,
+                # 🔥 DÜZELTME BURADA: 'final_score' -> 'final_success' YAPILDI
                 "score": final_success,
                 "color": color_class,
             }
@@ -528,23 +539,6 @@ def student_course_dashboard(request, course_id):
         "lo_details": lo_details,
     }
     return render(request, "student_dashboard.html", context)
-
-
-@login_required
-def home_redirect(request):
-    # 1. Bölüm Başkanı -> Öğretmen Paneline (Ama yetkileri fazla olacak)
-    if is_department_head(request.user):
-        return redirect("teacher_dashboard_home")
-
-    # 2. Öğretmen -> Öğretmen Paneline
-    if request.user.groups.filter(name="Öğretmen").exists():
-        return redirect("teacher_dashboard_home")
-
-    # 3. Öğrenci -> Ders Listesine
-    elif hasattr(request.user, "student"):
-        return redirect("student_course_list")
-
-    return redirect("login")
 
 
 @login_required
@@ -599,9 +593,11 @@ def student_general_success(request):
     po_scores = []
     po_details = []
     for code, data in po_buckets.items():
+        # Burası da 'final_score' olarak kalmalı, çünkü burada o isimde değişken var.
         final_score = 0
         if data["max"] > 0:
             final_score = round((data["earned"] / data["max"]) * 100, 1)
+
         po_labels.append(code)
         po_scores.append(final_score)
         color = (
@@ -624,3 +620,29 @@ def student_general_success(request):
         "po_details": po_details,
     }
     return render(request, "student_general_success.html", context)
+
+
+# 🔥 TRAFİK POLİSİ (YÖNLENDİRME MERKEZİ)
+@login_required
+def home_redirect(request):
+    """
+    Kullanıcıyı rolüne göre yönlendirir.
+    Rolü yoksa, sanki hatalı giriş yapmış gibi başa döndürür.
+    """
+    # 1. BÖLÜM BAŞKANI
+    if is_department_head(request.user):
+        return redirect("department_head_dashboard")
+
+    # 2. ÖĞRETMEN
+    if request.user.groups.filter(name="Öğretmen").exists():
+        return redirect("teacher_dashboard_home")
+
+    # 3. ÖĞRENCİ
+    elif hasattr(request.user, "student"):
+        return redirect("student_course_list")
+
+    # 4. HİÇBİRİ DEĞİLSE -> HATA VER VE AT
+    # Kullanıcıya "Rolün yok" demek yerine genel bir hata veriyoruz.
+    messages.error(request, "Hatalı kullanıcı adı veya şifre.")
+    logout(request)
+    return redirect("login")

@@ -5,14 +5,25 @@ from academic import views
 
 urlpatterns = [
     path("admin/", admin.site.urls),
-    # --- GİRİŞ / ÇIKIŞ ---
-    path("", auth_views.LoginView.as_view(), name="login"),
+    # --- GİRİŞ / ÇIKIŞ & YÖNLENDİRME ---
+    # Anasayfaya giren kişi önce 'home_redirect' (Trafik Polisi) ile karşılaşır.
+    # Giriş yapmamışsa zaten Login'e atılır.
+    path("", views.home_redirect, name="home_redirect"),
+    path(
+        "login/",
+        auth_views.LoginView.as_view(redirect_authenticated_user=True),
+        name="login",
+    ),
     path("logout/", auth_views.LogoutView.as_view(), name="logout"),
-    # --- ANA MENÜLER (DASHBOARD) ---
-    path("dashboard/", views.teacher_dashboard_home, name="teacher_dashboard_home"),
-    path("courses/", views.teacher_courses, name="teacher_courses"),
+    # --- ÖĞRETMEN PANELİ ---
+    path(
+        "teacher-dashboard/",
+        views.teacher_dashboard_home,
+        name="teacher_dashboard_home",
+    ),
+    path("teacher-courses/", views.teacher_courses, name="teacher_courses"),
     path("exams/", views.exam_list, name="exam_list"),
-    # --- DERS DETAYLARI ---
+    # --- DERS DETAYLARI & İÇERİK ---
     path(
         "course/<int:course_id>/dashboard/",
         views.course_dashboard,
@@ -36,14 +47,44 @@ urlpatterns = [
     ),
     # --- PO EŞLEŞTİRME ---
     path("lo/<int:lo_id>/mapping/", views.lo_mapping_detail, name="lo_mapping_detail"),
-    # YENİ EKLENEN: EŞLEŞTİRME SİLME LİNKİ
     path(
         "mapping/<int:mapping_id>/delete/",
         views.delete_outcome_mapping,
         name="delete_outcome_mapping",
     ),
-    # --- ÖĞRENCİ PANELİ VE YÖNLENDİRMELER ---
-    path("dashboard/redirect/", views.home_redirect, name="home_redirect"),
+    # --- 🔥 BÖLÜM BAŞKANI (YÖNETİM PANELİ) ---
+    path(
+        "department-head/",
+        views.department_head_dashboard,
+        name="department_head_dashboard",
+    ),
+    # 1. Öğrenci Yönetimi
+    path("manage-students/", views.manage_students, name="manage_students"),
+    path("add-student/", views.add_student, name="add_student"),
+    path(
+        "delete-student/<int:student_id>/", views.delete_student, name="delete_student"
+    ),
+    # 2. Ders Yönetimi
+    path("manage-courses/", views.manage_courses, name="manage_courses"),
+    path("add-course/", views.add_course, name="add_course"),
+    path("delete-course/<int:course_id>/", views.delete_course, name="delete_course"),
+    # 3. Dönem Yönetimi
+    path("manage-semesters/", views.manage_semesters, name="manage_semesters"),
+    path("add-semester/", views.add_semester, name="add_semester"),
+    path(
+        "delete-semester/<int:semester_id>/",
+        views.delete_semester,
+        name="delete_semester",
+    ),
+    # 4. Program Çıktıları (PO) Yönetimi
+    path("manage-pos/", views.manage_program_outcomes, name="manage_program_outcomes"),
+    path("add-po/", views.add_program_outcome, name="add_program_outcome"),
+    path(
+        "delete-po/<int:po_id>/",
+        views.delete_program_outcome,
+        name="delete_program_outcome",
+    ),
+    # --- ÖĞRENCİ PANELİ ---
     path(
         "student/course/<int:course_id>/",
         views.student_course_dashboard,

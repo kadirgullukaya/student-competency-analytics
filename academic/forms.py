@@ -1,5 +1,5 @@
 from django import forms
-from django.contrib.auth.models import User  # User modeli eklendi
+from django.contrib.auth.models import User
 from .models import (
     LearningOutcome,
     ProgramOutcome,
@@ -7,9 +7,9 @@ from .models import (
     AssessmentWeight,
     OutcomeMapping,
     Enrollment,
-    Student,  # Yeni eklendi
-    Course,  # Yeni eklendi
-    Semester,  # Yeni eklendi
+    Student,
+    Course,
+    Semester,
 )
 
 # --- BÖLÜM BAŞKANI İÇİN YENİ FORMLAR (YÖNETİM) ---
@@ -20,7 +20,8 @@ class StudentCreationForm(forms.ModelForm):
     first_name = forms.CharField(label="Ad", max_length=30)
     last_name = forms.CharField(label="Soyad", max_length=30)
     email = forms.EmailField(label="E-posta", required=True)
-    student_number = forms.CharField(label="Öğrenci Numarası", max_length=20)
+    # DÜZELTME: Modeldeki 'student_id' alanıyla eşleşmesi için isim güncellendi
+    student_id = forms.CharField(label="Öğrenci Numarası", max_length=20)
     password = forms.CharField(label="Şifre", widget=forms.PasswordInput)
 
     class Meta:
@@ -35,15 +36,19 @@ class StudentCreationForm(forms.ModelForm):
     def save(self, commit=True):
         # 1. Önce Django User oluştur
         user = super().save(commit=False)
-        # Kullanıcı adı olarak öğrenci numarasını kullanıyoruz (Benzersiz olması için)
-        user.username = self.cleaned_data["student_number"]
+        # Kullanıcı adı olarak öğrenci numarasını kullanıyoruz
+        user.username = self.cleaned_data["student_id"]
         user.set_password(self.cleaned_data["password"])
 
         if commit:
             user.save()
             # 2. Sonra Student profilini oluştur ve bağla
+            # DÜZELTME: Model alanı 'student_id' olduğu için burası düzeltildi
             Student.objects.create(
-                user=user, student_number=self.cleaned_data["student_number"]
+                user=user,
+                student_id=self.cleaned_data["student_id"],
+                first_name=self.cleaned_data["first_name"],
+                last_name=self.cleaned_data["last_name"],
             )
         return user
 
@@ -64,7 +69,6 @@ class CourseForm(forms.ModelForm):
         super().__init__(*args, **kwargs)
         for field in self.fields:
             self.fields[field].widget.attrs.update({"class": "form-control"})
-            # Teacher ve Semester seçimleri için select class'ı
             if field in ["semester", "teacher"]:
                 self.fields[field].widget.attrs.update({"class": "form-select"})
 
@@ -73,11 +77,10 @@ class CourseForm(forms.ModelForm):
 class SemesterForm(forms.ModelForm):
     class Meta:
         model = Semester
-        fields = ["name", "year", "term"]
+        # DÜZELTME: Modelde olmayan 'year' ve 'term' alanları kaldırıldı.
+        fields = ["name"]
         labels = {
             "name": "Dönem Adı (Örn: 2024-2025 Güz)",
-            "year": "Yıl",
-            "term": "Dönem Tipi (Fall/Spring)",
         }
 
     def __init__(self, *args, **kwargs):
@@ -86,7 +89,7 @@ class SemesterForm(forms.ModelForm):
             self.fields[field].widget.attrs.update({"class": "form-control"})
 
 
-# --- MEVCUT FORMLAR (Aynen Korundu) ---
+# --- MEVCUT FORMLAR ---
 
 
 # 1. LO EKLEME FORMU
@@ -184,7 +187,7 @@ class OutcomeMappingForm(forms.ModelForm):
             )
 
 
-# 6. ÖĞRENCİ EKLEME (ENROLLMENT) FORMU (Ders Kaydı)
+# 6. ÖĞRENCİ EKLEME (ENROLLMENT) FORMU
 class EnrollmentForm(forms.ModelForm):
     class Meta:
         model = Enrollment

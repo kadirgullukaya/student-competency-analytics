@@ -48,6 +48,18 @@
             transition: 0.3s;
         }
         button:hover { background-color: #2980b9; }
+
+        /* HATA MESAJI KUTUSU STİLİ (YENİ EKLENDİ) */
+        .error-message {
+            background-color: #ffebee;
+            color: #c62828;
+            border: 1px solid #ef9a9a;
+            padding: 10px;
+            border-radius: 5px;
+            margin-bottom: 15px;
+            font-size: 14px;
+            text-align: left;
+        }
     </style>
 </head>
 <body>
@@ -55,6 +67,20 @@
 <div class="login-card">
     <h2>🎓 Akademik Sistem</h2>
     <p>Lütfen hesabınızla giriş yapın.</p>
+
+    {% if form.errors %}
+        <div class="error-message">
+            ⚠️ Hatalı kullanıcı adı veya şifre.
+        </div>
+    {% endif %}
+
+    {% if messages %}
+        {% for message in messages %}
+            <div class="error-message">
+                ⚠️ {{ message }}
+            </div>
+        {% endfor %}
+    {% endif %}
 
     <form method="post">
         {% csrf_token %}
