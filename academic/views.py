@@ -132,7 +132,6 @@ def course_dashboard(request, course_id):
             or 0
         )
         course_labels.append(c.code)
-        # DÜZELTME BURADA: Decimal -> float dönüşümü
         course_data.append(float(round(avg, 1)))
 
     exam_labels = []
@@ -145,7 +144,6 @@ def course_dashboard(request, course_id):
             or 0
         )
         exam_labels.append(exam.name)
-        # DÜZELTME BURADA: Decimal -> float dönüşümü
         exam_data.append(float(round(avg, 1)))
 
     recent_exam = assessments.first()
@@ -166,12 +164,10 @@ def course_dashboard(request, course_id):
             "max": max_score,
             "students": total_students,
         },
-        # --- VERİLERİ JSON OLARAK GÖNDERİYORUZ ---
         "graph_comparison_labels": json.dumps(course_labels),
         "graph_comparison_data": json.dumps(course_data),
         "graph_exams_labels": json.dumps(exam_labels),
         "graph_exams_data": json.dumps(exam_data),
-        # ----------------------------------------
         "risky_students": risky_students,
     }
     return render(request, "teacher_dashboard.html", context)
@@ -278,3 +274,249 @@ def lo_mapping_detail(request, lo_id):
         "lo_mapping_detail.html",
         {"lo": lo, "mappings": mappings, "form": form},
     )
+
+
+# --- 9. ÖĞRENCİ DASHBOARD (GÜNCELLENMİŞ VERSİYON) ---
+@login_required
+def student_course_dashboard(request, course_id):
+    # Güvenlik Kontrolü
+    if not hasattr(request.user, "student"):
+        return redirect("teacher_dashboard_home")
+
+    course = get_object_or_404(Course, id=course_id)
+    student = request.user.student
+
+    # 1. GENEL NOT HESABI
+    assessments = Assessment.objects.filter(course=course)
+    total_weight = 0
+    weighted_sum = 0
+
+    student_scores = StudentScore.objects.filter(
+        student=student, assessment__in=assessments
+    )
+    score_map = {s.assessment.id: s.score for s in student_scores}
+
+    # Grafik Verileri
+    exam_labels = []
+    my_scores = []
+    class_averages = []
+
+    for exam in assessments:
+        exam_labels.append(exam.name)
+        if exam.id in score_map:
+            my_score = float(score_map[exam.id])
+            my_scores.append(my_score)
+            weighted_sum += my_score * exam.weight
+            total_weight += exam.weight
+        else:
+            my_scores.append(0)
+
+        # Sınıf Ortalaması
+        avg_score = StudentScore.objects.filter(assessment=exam).aggregate(
+            Avg("score")
+        )["score__avg"]
+        if avg_score:
+            class_averages.append(float(round(avg_score, 1)))
+        else:
+            class_averages.append(0)
+
+    current_average = round(weighted_sum / total_weight, 2) if total_weight > 0 else 0
+
+    # 2. LO (DERS ÇIKTISI) DETAYLI HESAP
+    learning_outcomes = LearningOutcome.objects.filter(course=course)
+
+    lo_labels = []
+    lo_data = []
+    lo_details = []
+
+    for lo in learning_outcomes:
+        lo_labels.append(f"{lo.code}")
+
+        relevant_weights = AssessmentWeight.objects.filter(learning_outcome=lo)
+        lo_total_score = 0
+        lo_max_possible = 0
+
+        for aw in relevant_weights:
+            exam = aw.assessment
+            if exam.id in score_map:
+                student_exam_score = float(score_map[exam.id])
+                effect = float(aw.percentage)
+                lo_total_score += student_exam_score * effect
+                lo_max_possible += 100 * effect
+
+        final_success = 0
+        if lo_max_possible > 0:
+            final_success = float(round((lo_total_score / lo_max_possible) * 100, 1))
+
+        # Grafik için veri
+        lo_data.append(final_success)
+
+        # HTML Listesi için veri
+        color_class = "success"  # Yeşil
+        if final_success < 50:
+            color_class = "danger"  # Kırmızı
+        elif final_success < 70:
+            color_class = "warning"  # Sarı
+
+        lo_details.append(
+            {
+                "code": lo.code,
+                "description": lo.description,
+                "score": final_success,
+                "color": color_class,
+            }
+        )
+
+    context = {
+        "course": course,
+        "student": student,
+        "current_average": current_average,
+        "assessments": assessments,
+        "score_map": score_map,
+        "radar_labels": json.dumps(lo_labels),
+        "radar_data": json.dumps(lo_data),
+        "exam_labels": json.dumps(exam_labels),
+        "my_scores": json.dumps(my_scores),
+        "class_averages": json.dumps(class_averages),
+        "lo_details": lo_details,
+    }
+    return render(request, "student_dashboard.html", context)
+
+
+# --- 10. GİRİŞ YÖNLENDİRİCİSİ (TRAFİK POLİSİ) ---
+@login_required
+def home_redirect(request):
+    if (
+        request.user.groups.filter(name="Öğretmen").exists()
+        or request.user.is_superuser
+    ):
+        return redirect("teacher_dashboard_home")
+
+    elif hasattr(request.user, "student"):
+        return redirect("student_course_list")
+
+    return redirect("login")
+
+
+# --- 11. ÖĞRENCİ DERS LİSTESİ (ANA SAYFA) ---
+@login_required
+def student_course_list(request):
+    if not hasattr(request.user, "student"):
+        return redirect("teacher_dashboard_home")
+
+    student = request.user.student
+    enrollments = Enrollment.objects.filter(student=student)
+
+    context = {"enrollments": enrollments}
+    return render(request, "student_course_list.html", context)
+
+
+# --- 12. GENEL BAŞARIM (PO ANALİZİ) - AĞIRLIKLI HESAPLAMA ---
+@login_required
+def student_general_success(request):
+    if not hasattr(request.user, "student"):
+        return redirect("teacher_dashboard_home")
+
+    student = request.user.student
+
+    # 1. PO HAVUZLARINI HAZIRLA
+    all_pos = ProgramOutcome.objects.all()
+    po_buckets = {
+        po.code: {"earned": 0, "max": 0, "desc": po.description} for po in all_pos
+    }
+
+    # 2. ÖĞRENCİNİN TÜM DERSLERİNİ GEZ
+    enrollments = Enrollment.objects.filter(student=student)
+
+    for enrollment in enrollments:
+        course = enrollment.course
+
+        # --- A. LO BAŞARISINI HESAPLA ---
+        assessments = Assessment.objects.filter(course=course)
+        student_scores = StudentScore.objects.filter(
+            student=student, assessment__in=assessments
+        )
+        score_map = {s.assessment.id: s.score for s in student_scores}
+
+        learning_outcomes = LearningOutcome.objects.filter(course=course)
+
+        for lo in learning_outcomes:
+            relevant_weights = AssessmentWeight.objects.filter(learning_outcome=lo)
+            lo_total = 0
+            lo_max_possible = 0
+
+            for aw in relevant_weights:
+                if aw.assessment.id in score_map:
+                    lo_total += float(score_map[aw.assessment.id]) * float(
+                        aw.percentage
+                    )
+                    lo_max_possible += 100 * float(aw.percentage)
+
+            lo_success_rate = 0
+            if lo_max_possible > 0:
+                lo_success_rate = (lo_total / lo_max_possible) * 100
+
+            # --- B. PO HESABI ---
+            mappings = OutcomeMapping.objects.filter(learning_outcome=lo)
+
+            for mapping in mappings:
+                po_code = mapping.program_outcome.code
+                weight = float(mapping.weight)
+
+                contribution = lo_success_rate * weight
+                max_contribution = 100 * weight
+
+                po_buckets[po_code]["earned"] += contribution
+                po_buckets[po_code]["max"] += max_contribution
+
+    # 3. SONUÇLARI GRAFİK İÇİN HAZIRLA
+    po_labels = []
+    po_scores = []
+    po_details = []
+
+    for code, data in po_buckets.items():
+        final_score = 0
+        if data["max"] > 0:
+            final_score = round((data["earned"] / data["max"]) * 100, 1)
+
+        po_labels.append(code)
+        po_scores.append(final_score)
+
+        color = (
+            "success"
+            if final_score >= 70
+            else "warning" if final_score >= 50 else "danger"
+        )
+
+        po_details.append(
+            {
+                "code": code,
+                "description": data["desc"],
+                "score": final_score,
+                "color": color,
+            }
+        )
+
+    context = {
+        "student": student,
+        "po_labels": json.dumps(po_labels),
+        "po_scores": json.dumps(po_scores),
+        "po_details": po_details,
+    }
+    return render(request, "student_general_success.html", context)
+
+
+# --- 13. EŞLEŞTİRME SİLME (YENİ EKLENEN) ---
+@login_required
+@user_passes_test(is_teacher)
+def delete_outcome_mapping(request, mapping_id):
+    # Silinecek eşleştirmeyi bul
+    mapping = get_object_or_404(OutcomeMapping, id=mapping_id)
+
+    # Silindikten sonra geri döneceğimiz LO sayfasının ID'sini sakla
+    lo_id = mapping.learning_outcome.id
+
+    if request.method == "POST":
+        mapping.delete()
+
+    return redirect("lo_mapping_detail", lo_id=lo_id)
