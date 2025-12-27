@@ -1,0 +1,29 @@
+{% extends 'base.html' %}
+{% block content %}
+<div class="container mt-4">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h3>🗓️ Dönem Ayarları</h3>
+        <div>
+            <a href="{% url 'department_head_dashboard' %}" class="btn btn-secondary me-2"><i class="fas fa-arrow-left"></i> Geri</a>
+            <a href="{% url 'add_semester' %}" class="btn btn-warning"><i class="fas fa-plus"></i> Yeni Dönem</a>
+        </div>
+    </div>
+    <div class="row row-cols-1 row-cols-md-3 g-4">
+        {% for semester in semesters %}
+        <div class="col">
+            <div class="card h-100 border-warning shadow-sm">
+                <div class="card-body text-center">
+                    <h5 class="card-title fw-bold mb-3">{{ semester.name }}</h5>
+                    <form action="{% url 'delete_semester' semester.id %}" method="POST" onsubmit="return confirm('Bu dönemi silmek istediğinize emin misiniz?');">
+                        {% csrf_token %}
+                        <button type="submit" class="btn btn-outline-danger btn-sm"><i class="fas fa-trash"></i> Sil</button>
+                    </form>
+                </div>
+            </div>
+        </div>
+        {% empty %}
+        <div class="col-12 text-center text-muted"><p>Kayıtlı dönem yok.</p></div>
+        {% endfor %}
+    </div>
+</div>
+{% endblock %}
