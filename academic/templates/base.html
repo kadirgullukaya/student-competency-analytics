@@ -161,14 +161,23 @@
 
         <ul class="list-unstyled components">
             
-            <li>
-                <a href="{% url 'home_redirect' %}" 
-                   class="{% if request.resolver_match.url_name == 'teacher_dashboard_home' or request.resolver_match.url_name == 'student_course_list' %}active{% endif %}">
-                    <i class="fas fa-home"></i> Ana Sayfa
-                </a>
-            </li>
+            {% if user.is_superuser or "Öğretmen" in user.groups.all|join:"," or "Bölüm Başkanı" in user.groups.all|join:"," %}
+                
+                {% if user.is_superuser or "Bölüm Başkanı" in user.groups.all|join:"," %}
+                <li>
+                    <a href="{% url 'department_head_dashboard' %}" class="text-warning fw-bold {% if request.resolver_match.url_name == 'department_head_dashboard' %}active{% endif %}">
+                        <i class="fas fa-user-tie"></i> Bölüm Bşk. Paneli
+                    </a>
+                </li>
+                {% endif %}
 
-            {% if user.is_superuser or user.groups.all.0.name == "Öğretmen" %}
+                <li>
+                    <a href="{% url 'teacher_dashboard_home' %}" 
+                       class="{% if request.resolver_match.url_name == 'teacher_dashboard_home' %}active{% endif %}">
+                        <i class="fas fa-home"></i> Ana Sayfa
+                    </a>
+                </li>
+
                 <li>
                     <a href="{% url 'teacher_courses' %}" class="{% if request.resolver_match.url_name == 'teacher_courses' %}active{% endif %}">
                         <i class="fas fa-chalkboard-teacher"></i> Ders Yönetimi
@@ -186,6 +195,11 @@
                 </li>
             
             {% else %}
+                <li>
+                    <a href="{% url 'student_course_list' %}" class="{% if request.resolver_match.url_name == 'student_course_list' %}active{% endif %}">
+                        <i class="fas fa-home"></i> Ana Sayfa
+                    </a>
+                </li>
                 <li>
                     <a href="{% url 'student_course_list' %}" class="{% if request.resolver_match.url_name == 'student_course_list' %}active{% endif %}">
                         <i class="fas fa-book-reader"></i> Derslerim

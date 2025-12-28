@@ -315,8 +315,19 @@ def delete_semester(request, semester_id):
 @login_required
 @user_passes_test(is_department_head)
 def manage_program_outcomes(request):
+    # Program Çıktılarını (PO) Çek
     pos = ProgramOutcome.objects.all().order_by("code")
-    return render(request, "manage_program_outcomes.html", {"pos": pos})
+
+    # 🔥 YENİ: Öğrenme Çıktılarını (LO) da Çek (Ders bilgisiyle beraber)
+    # Course bilgisiyle beraber çektiğimiz için select_related kullanıyoruz (Performans artışı)
+    los = (
+        LearningOutcome.objects.all()
+        .select_related("course")
+        .order_by("course__code", "code")
+    )
+
+    context = {"pos": pos, "los": los}
+    return render(request, "manage_program_outcomes.html", context)
 
 
 @login_required
@@ -520,7 +531,6 @@ def student_course_dashboard(request, course_id):
             {
                 "code": lo.code,
                 "description": lo.description,
-                # 🔥 DÜZELTME BURADA: 'final_score' -> 'final_success' YAPILDI
                 "score": final_success,
                 "color": color_class,
             }
@@ -593,7 +603,6 @@ def student_general_success(request):
     po_scores = []
     po_details = []
     for code, data in po_buckets.items():
-        # Burası da 'final_score' olarak kalmalı, çünkü burada o isimde değişken var.
         final_score = 0
         if data["max"] > 0:
             final_score = round((data["earned"] / data["max"]) * 100, 1)

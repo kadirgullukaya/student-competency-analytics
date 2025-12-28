@@ -1,33 +1,100 @@
 {% extends 'base.html' %}
+
 {% block content %}
 <div class="container mt-4">
+    
     <div class="d-flex justify-content-between align-items-center mb-4">
-        <h3>🎯 Program Çıktıları (PO)</h3>
         <div>
-            <a href="{% url 'department_head_dashboard' %}" class="btn btn-secondary me-2"><i class="fas fa-arrow-left"></i> Geri</a>
-            <a href="{% url 'add_program_outcome' %}" class="btn btn-info text-white"><i class="fas fa-plus"></i> Yeni PO Ekle</a>
+            <h3 class="fw-bold"><i class="fas fa-network-wired me-2"></i>Çıktı Yönetimi (PO & LO)</h3>
+            <p class="text-muted mb-0">Bölüm hedefleri (PO) ve ders kazanımlarını (LO) buradan izleyebilirsiniz.</p>
+        </div>
+        <div>
+            <a href="{% url 'department_head_dashboard' %}" class="btn btn-secondary me-2">
+                <i class="fas fa-arrow-left"></i> Geri
+            </a>
+            <a href="{% url 'add_program_outcome' %}" class="btn btn-info text-white">
+                <i class="fas fa-plus"></i> Yeni PO Ekle
+            </a>
         </div>
     </div>
-    <div class="card shadow-sm"><div class="card-body">
-        <table class="table table-hover align-middle">
-            <thead class="table-light"><tr><th>Kod</th><th>Açıklama</th><th class="text-end">İşlem</th></tr></thead>
-            <tbody>
-                {% for po in pos %}
-                <tr>
-                    <td><span class="badge bg-primary">{{ po.code }}</span></td>
-                    <td>{{ po.description }}</td>
-                    <td class="text-end">
-                        <form action="{% url 'delete_program_outcome' po.id %}" method="POST" class="d-inline" onsubmit="return confirm('Silmek istediğinize emin misiniz?');">
-                            {% csrf_token %}
-                            <button type="submit" class="btn btn-sm btn-outline-danger"><i class="fas fa-trash"></i></button>
-                        </form>
-                    </td>
-                </tr>
-                {% empty %}
-                <tr><td colspan="3" class="text-center text-muted py-4">PO bulunamadı.</td></tr>
-                {% endfor %}
-            </tbody>
-        </table>
-    </div></div>
+
+    <div class="card shadow-sm mb-5">
+        <div class="card-header bg-light">
+            <h5 class="mb-0 text-dark fw-bold"><i class="fas fa-bullseye me-2 text-info"></i>Program Çıktıları (PO)</h5>
+        </div>
+        <div class="card-body">
+            <div class="table-responsive">
+                <table class="table table-hover align-middle">
+                    <thead class="table-light">
+                        <tr>
+                            <th style="width: 100px;">Kod</th>
+                            <th>Açıklama</th>
+                            <th class="text-end" style="width: 100px;">İşlem</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for po in pos %}
+                        <tr>
+                            <td><span class="badge bg-primary fs-6">{{ po.code }}</span></td>
+                            <td>{{ po.description }}</td>
+                            <td class="text-end">
+                                <form action="{% url 'delete_program_outcome' po.id %}" method="POST" class="d-inline" onsubmit="return confirm('Bu PO\'yu silmek üzeresiniz. Emin misiniz?');">
+                                    {% csrf_token %}
+                                    <button type="submit" class="btn btn-sm btn-outline-danger">
+                                        <i class="fas fa-trash"></i>
+                                    </button>
+                                </form>
+                            </td>
+                        </tr>
+                        {% empty %}
+                        <tr>
+                            <td colspan="3" class="text-center text-muted py-3">Henüz Program Çıktısı (PO) eklenmemiş.</td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <div class="card shadow-sm border-top-0">
+        <div class="card-header bg-light d-flex justify-content-between align-items-center">
+            <h5 class="mb-0 text-dark fw-bold"><i class="fas fa-book-reader me-2 text-success"></i>Ders Öğrenme Çıktıları (LO)</h5>
+            <small class="text-muted">LO'lar ilgili dersin panelinden düzenlenir.</small>
+        </div>
+        <div class="card-body">
+            <div class="table-responsive">
+                <table class="table table-hover align-middle table-striped">
+                    <thead class="table-light">
+                        <tr>
+                            <th style="width: 15%;">Ders Kodu</th>
+                            <th style="width: 10%;">LO Kodu</th>
+                            <th>Açıklama</th>
+                            <th class="text-end" style="width: 15%;">İşlem</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for lo in los %}
+                        <tr>
+                            <td class="fw-bold text-success">{{ lo.course.code }}</td>
+                            <td><span class="badge bg-secondary">{{ lo.code }}</span></td>
+                            <td>{{ lo.description }}</td>
+                            <td class="text-end">
+                                <a href="{% url 'course_dashboard' lo.course.id %}" class="btn btn-sm btn-outline-primary">
+                                    <i class="fas fa-external-link-alt"></i> Derse Git
+                                </a>
+                            </td>
+                        </tr>
+                        {% empty %}
+                        <tr>
+                            <td colspan="4" class="text-center text-muted py-3">Henüz hiç bir derse LO tanımlanmamış.</td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
 </div>
 {% endblock %}
