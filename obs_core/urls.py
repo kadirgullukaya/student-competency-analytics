@@ -96,4 +96,6 @@ urlpatterns = [
         views.student_general_success,
         name="student_general_success",
     ),
+    # 🔥 YENİ EKLENEN: NOTLARIM SAYFASI
+    path("student/grades/", views.student_grades, name="student_grades"),
 ]

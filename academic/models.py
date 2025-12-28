@@ -120,3 +120,54 @@ class Enrollment(models.Model):
 
     def __str__(self):
         return f"{self.student.first_name} -> {self.course.code}"
+
+from django.db import models
+from django.contrib.auth.models import User
+from django.core.validators import MinValueValidator, MaxValueValidator
+
+class Lesson(models.Model):
+    code = models.CharField(max_length=10, unique=True, verbose_name="Ders Kodu")
+    name = models.CharField(max_length=100, verbose_name="Ders Adı")
+    credit = models.IntegerField(default=3, verbose_name="Kredi")
+
+    def __str__(self):
+        return f"{self.code} - {self.name}"
+
+class Grade(models.Model):
+    student = models.ForeignKey(User, on_delete=models.CASCADE, related_name='grades', verbose_name="Öğrenci")
+    lesson = models.ForeignKey(Lesson, on_delete=models.CASCADE, verbose_name="Ders")
+    
+    # Notlar (0-100 arası)
+    midterm = models.IntegerField(
+        verbose_name="Vize", 
+        null=True, blank=True,
+        validators=[MinValueValidator(0), MaxValueValidator(100)]
+    )
+    final = models.IntegerField(
+        verbose_name="Final", 
+        null=True, blank=True,
+        validators=[MinValueValidator(0), MaxValueValidator(100)]
+    )
+    
+    class Meta:
+        unique_together = ('student', 'lesson') # Bir öğrencinin aynı dersten sadece bir not kaydı olabilir.
+        verbose_name = "Not"
+        verbose_name_plural = "Notlar"
+
+    # Ortalama Hesaplama (Property olarak)
+    @property
+    def average(self):
+        if self.midterm is None or self.final is None:
+            return None # Notlar tam girilmediyse
+        
+        # Örnek: Vize %40, Final %60
+        avg = (self.midterm * 0.4) + (self.final * 0.6)
+        return round(avg, 2)
+
+    # Geçti/Kaldı Durumu
+    @property
+    def status(self):
+        avg = self.average
+        if avg is None:
+            return "Devam Ediyor"
+        return "Geçti" if avg >= 50 else "Kaldı" # Geçme notu 50 kabul edildi

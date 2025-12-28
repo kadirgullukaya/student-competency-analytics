@@ -86,7 +86,7 @@ def teacher_courses(request):
     else:
         my_courses = Course.objects.filter(teacher=request.user)
 
-    # 2. İSTATİSTİKLERİ HESAPLA (Eksik olan kısım burasıydı)
+    # 2. İSTATİSTİKLERİ HESAPLA
     total_courses = my_courses.count()
 
     # Tüm derslerdeki tekil öğrenci sayısı
@@ -673,6 +673,67 @@ def student_general_success(request):
         "po_details": po_details,
     }
     return render(request, "student_general_success.html", context)
+
+
+# --- ÖĞRENCİ NOTLARIM SAYFASI (GÜNCELLENDİ: Ders Bazlı Gruplama) ---
+@login_required
+def student_grades(request):
+    """
+    Öğrencinin notlarını derslere göre gruplayarak ve ortalama hesaplayarak gösterir.
+    """
+    if not hasattr(request.user, "student"):
+        return redirect("teacher_dashboard_home")
+
+    student = request.user.student
+
+    # Tüm notları çek
+    all_scores = (
+        StudentScore.objects.filter(student=student)
+        .select_related("assessment", "assessment__course")
+        .order_by("assessment__course__code", "-assessment__date")
+    )
+
+    # Veriyi Python tarafında gruplayalım
+    # Yapı: { course_id: {'course': course_obj, 'scores': [], 'total': 0, 'weights': 0} }
+    courses_data = {}
+
+    for s in all_scores:
+        course = s.assessment.course
+        if course.id not in courses_data:
+            courses_data[course.id] = {
+                "course": course,
+                "scores": [],
+                "weighted_sum": 0,
+                "total_weight": 0,
+                "average": 0
+            }
+        
+        # Sınavı listeye ekle
+        courses_data[course.id]["scores"].append(s)
+        
+        # Ağırlıklı ortalama hesabı için veri topla (Basit ortalama değil, ağırlıklı ortalama)
+        # Not: Assessment modelinde 'weight' (yüzde etki) alanı olduğunu varsayıyoruz.
+        # Eğer weight yoksa direkt aritmetik ortalama alırız.
+        weight = s.assessment.weight if hasattr(s.assessment, 'weight') else 1
+        courses_data[course.id]["weighted_sum"] += float(s.score) * float(weight)
+        courses_data[course.id]["total_weight"] += float(weight)
+
+    # Ortalamaları hesapla ve listeye çevir
+    grouped_grades = []
+    for cid, data in courses_data.items():
+        if data["total_weight"] > 0:
+            # Eğer ağırlık sistemi varsa
+            avg = data["weighted_sum"] / data["total_weight"]
+            # Eğer weight yüzdelikse (örn toplam 100 değilse) ve basit ortalama isteniyorsa:
+            # avg = data["weighted_sum"] / len(data["scores"]) # (Basit aritmetik için bunu açabilirsin)
+        else:
+            avg = 0
+            
+        data["average"] = round(avg, 1)
+        grouped_grades.append(data)
+
+    context = {"grouped_grades": grouped_grades}
+    return render(request, "student_grades.html", context)
 
 
 # 🔥 TRAFİK POLİSİ (YÖNLENDİRME MERKEZİ)
