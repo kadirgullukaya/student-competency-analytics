@@ -10,20 +10,18 @@ from .models import (
     Student,
     Course,
     Semester,
-    Department, # <--- YENİ EKLENDİ
+    Department, 
 )
 
-# --- BÖLÜM BAŞKANI İÇİN YENİ FORMLAR (YÖNETİM) ---
 
-
-# A. ÖĞRENCİ OLUŞTURMA FORMU (User + Student birleşik)
+# Aöğrenci oluşturma arayüzü
 class StudentCreationForm(forms.ModelForm):
     first_name = forms.CharField(label="Ad", max_length=30)
     last_name = forms.CharField(label="Soyad", max_length=30)
     email = forms.EmailField(label="E-posta", required=True)
     student_id = forms.CharField(label="Öğrenci Numarası", max_length=20)
     
-    # 🔥 YENİ EKLENEN: Bölüm Seçimi
+    # bölüm seçimi - admin panelinden
     department = forms.ModelChoiceField(
         queryset=Department.objects.all(),
         required=False,
@@ -48,21 +46,21 @@ class StudentCreationForm(forms.ModelForm):
                 self.fields[field].widget.attrs.update({"class": "form-select"})
 
     def save(self, commit=True):
-        # 1. Önce Django User oluştur
+        # superuser oluşturma
         user = super().save(commit=False)
-        # Kullanıcı adı olarak öğrenci numarasını kullanıyoruz
+        # Kullanıcı adı olarak öğrenci numarasını kullanıyoruz!!!!
         user.username = self.cleaned_data["student_id"]
         user.set_password(self.cleaned_data["password"])
 
         if commit:
             user.save()
-            # 2. Sonra Student profilini oluştur ve bağla
+            # admin panelinden Student profilini oluştur ve bağla
             Student.objects.create(
                 user=user,
                 student_id=self.cleaned_data["student_id"],
                 first_name=self.cleaned_data["first_name"],
                 last_name=self.cleaned_data["last_name"],
-                department=self.cleaned_data["department"], # 🔥 Kayıt sırasında bölümü de ekle
+                department=self.cleaned_data["department"], #Kayıt sırasında bölümü de ekle
             )
         return user
 
@@ -101,8 +99,6 @@ class SemesterForm(forms.ModelForm):
         for field in self.fields:
             self.fields[field].widget.attrs.update({"class": "form-control"})
 
-
-# --- MEVCUT FORMLAR ---
 
 
 # 1. LO EKLEME FORMU
