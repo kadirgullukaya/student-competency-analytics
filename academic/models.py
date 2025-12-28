@@ -3,7 +3,7 @@ from django.contrib.auth.models import User
 from django.core.validators import MinValueValidator, MaxValueValidator
 
 
-# --- 0. YENİ EKLENEN: BÖLÜM MODELİ ---
+# bölüm-
 class Department(models.Model):
     name = models.CharField(max_length=100, unique=True, verbose_name="Bölüm Adı")
 
@@ -11,9 +11,9 @@ class Department(models.Model):
         return self.name
 
 
-# 1. TEMEL MODELLER (OBS Parçaları)
+# TEMEL OBS
 class Semester(models.Model):
-    name = models.CharField(max_length=50)  # Örn: "Fall 2025"
+    name = models.CharField(max_length=50)  # örnEğin: Fall 2025
 
     def __str__(self):
         return self.name
@@ -23,7 +23,7 @@ class Student(models.Model):
     # Bu satır öğrenciyi giriş yapan kullanıcıya bağlar
     user = models.OneToOneField(User, on_delete=models.CASCADE, null=True, blank=True)
     
-    # 🔥 YENİ EKLENEN: Bölüm İlişkisi
+    # Bölüm İlişkisi
     department = models.ForeignKey(Department, on_delete=models.SET_NULL, null=True, blank=True, verbose_name="Bölüm")
 
     student_id = models.CharField(max_length=20, unique=True)
@@ -47,10 +47,10 @@ class Course(models.Model):
         return f"{self.code} - {self.teacher.username if self.teacher else 'Atanmamış'}"
 
 
-# 2. AKADEMİK ÇIKTILAR (OUTCOMES)
+# outcomes
 class ProgramOutcome(models.Model):
-    code = models.CharField(max_length=10)  # Örn: PO1
-    description = models.TextField()  # Açıklama metni
+    code = models.CharField(max_length=10)
+    description = models.TextField() 
 
     def __str__(self):
         return self.code
@@ -58,10 +58,10 @@ class ProgramOutcome(models.Model):
 
 class LearningOutcome(models.Model):
     course = models.ForeignKey(Course, on_delete=models.CASCADE)
-    code = models.CharField(max_length=10)  # Örn: LO1
+    code = models.CharField(max_length=10) 
     description = models.TextField()
 
-    # Hangi LO, Hangi PO'yu ne kadar etkiliyor?
+    # Hangi LO, Hangi PO'yu ne kadar etkiliyor? dikkatlice girilmeli
     program_outcomes = models.ManyToManyField(ProgramOutcome, through="OutcomeMapping")
 
     def __str__(self):
@@ -79,13 +79,13 @@ class OutcomeMapping(models.Model):
         return f"{self.learning_outcome} -> {self.program_outcome} (%{self.weight})"
 
 
-# 3. DEĞERLENDİRME (Sınavlar)
+# sınavlar
 class Assessment(models.Model):
     course = models.ForeignKey(Course, on_delete=models.CASCADE)
     name = models.CharField(max_length=100)  # Örn: Midterm 1
     date = models.DateField(auto_now_add=True)
 
-    # --- YENİ EKLENEN ALAN: Sınavın Ağırlığı ---
+    # girilen sınavın genel ortalamaya etkisi girilmeli!.
     weight = models.IntegerField(
         default=0, help_text="Genel not ortalamasına etkisi (%)"
     )
@@ -121,7 +121,7 @@ class StudentScore(models.Model):
         return f"{self.student.first_name} - {self.assessment.name}: {self.score}"
 
 
-# 5. DERS KAYDI (ENROLLMENT)
+# 5. DERS KAYDI
 class Enrollment(models.Model):
     student = models.ForeignKey(Student, on_delete=models.CASCADE)
     course = models.ForeignKey(Course, on_delete=models.CASCADE)
@@ -134,7 +134,7 @@ class Enrollment(models.Model):
         return f"{self.student.first_name} -> {self.course.code}"
 
 
-# --- MEVCUT ESKİ KODLAR (Lesson, Grade) ---
+#
 class Lesson(models.Model):
     code = models.CharField(max_length=10, unique=True, verbose_name="Ders Kodu")
     name = models.CharField(max_length=100, verbose_name="Ders Adı")
@@ -147,7 +147,7 @@ class Grade(models.Model):
     student = models.ForeignKey(User, on_delete=models.CASCADE, related_name='grades', verbose_name="Öğrenci")
     lesson = models.ForeignKey(Lesson, on_delete=models.CASCADE, verbose_name="Ders")
     
-    # Notlar (0-100 arası)
+    # Notlar (0-100 arası girilmeli)
     midterm = models.IntegerField(
         verbose_name="Vize", 
         null=True, blank=True,
