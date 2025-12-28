@@ -1,6 +1,6 @@
 from django.contrib import admin
 from .models import (
-    Department,       # <--- YENİ EKLENEN
+    Department,        
     Semester,
     Student,
     Course,
@@ -13,13 +13,13 @@ from .models import (
     Enrollment,
 )
 
-# --- 1. YENİ EKLENEN: BÖLÜM YÖNETİMİ ---
+#Bölüm Yönetimi
 @admin.register(Department)
 class DepartmentAdmin(admin.ModelAdmin):
     list_display = ('name',)
     search_fields = ('name',)
 
-# --- TEMEL MODELLER ---
+#Gerekli Modeller
 
 @admin.register(Semester)
 class SemesterAdmin(admin.ModelAdmin):
@@ -27,9 +27,9 @@ class SemesterAdmin(admin.ModelAdmin):
 
 @admin.register(Student)
 class StudentAdmin(admin.ModelAdmin):
-    # Listede görünecek sütunlar (Bölüm eklendi)
+    # listede görünen sütunlar
     list_display = ('student_id', 'first_name', 'last_name', 'department', 'user')
-    # Sağ tarafta filtreleme menüsü
+    # sağ taraftaki filtreleme menüsü
     list_filter = ('department',) 
     # Arama çubuğu
     search_fields = ('student_id', 'first_name', 'last_name', 'user__username')
@@ -44,7 +44,7 @@ class CourseAdmin(admin.ModelAdmin):
 class ProgramOutcomeAdmin(admin.ModelAdmin):
     list_display = ('code', 'description')
 
-# --- LO YÖNETİMİ (Inline Yapısı Korundu) ---
+# LO yönetimi
 class OutcomeMappingInline(admin.TabularInline):
     model = OutcomeMapping
     extra = 1
@@ -55,7 +55,7 @@ class LearningOutcomeAdmin(admin.ModelAdmin):
     list_display = ("code", "course", "description")
     list_filter = ('course',)
 
-# --- SINAV YÖNETİMİ (Inline Yapısı Korundu) ---
+#sınav yönetimi
 class AssessmentWeightInline(admin.TabularInline):
     model = AssessmentWeight
     extra = 1
@@ -66,7 +66,7 @@ class AssessmentAdmin(admin.ModelAdmin):
     list_display = ("name", "course", "date", "weight")
     list_filter = ('course',)
 
-# --- DİĞERLERİ ---
+# kayıt
 
 @admin.register(StudentScore)
 class StudentScoreAdmin(admin.ModelAdmin):
