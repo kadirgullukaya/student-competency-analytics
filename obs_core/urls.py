@@ -5,24 +5,34 @@ from academic import views
 
 urlpatterns = [
     path("admin/", admin.site.urls),
-    # --- GİRİŞ / ÇIKIŞ & YÖNLENDİRME ---
-    # Anasayfaya giren kişi önce 'home_redirect' (Trafik Polisi) ile karşılaşır.
-    # Giriş yapmamışsa zaten Login'e atılır.
-    path("", views.home_redirect, name="home_redirect"),
+
+    # --- 1. KARŞILAMA EKRANI (LANDING PAGE) ---
+    path("", views.landing_page, name="landing_page"),
+
+    # --- 2. TRAFİK POLİSİ (YÖNLENDİRME) ---
+    path("redirect/", views.home_redirect, name="home_redirect"),
+
+    # --- 3. GİRİŞ / ÇIKIŞ ---
     path(
         "login/",
-        auth_views.LoginView.as_view(redirect_authenticated_user=True),
+        views.CustomLoginView.as_view(redirect_authenticated_user=True),
         name="login",
     ),
+    
     path("logout/", auth_views.LogoutView.as_view(), name="logout"),
+
     # --- ÖĞRETMEN PANELİ ---
     path(
         "teacher-dashboard/",
         views.teacher_dashboard_home,
         name="teacher_dashboard_home",
     ),
+    # 🔥 YENİ EKLENEN: ÖĞRETMEN AYARLAR SAYFASI
+    path("teacher-dashboard/settings/", views.teacher_settings, name="teacher_settings"),
+    
     path("teacher-courses/", views.teacher_courses, name="teacher_courses"),
     path("exams/", views.exam_list, name="exam_list"),
+
     # --- DERS DETAYLARI & İÇERİK ---
     path(
         "course/<int:course_id>/dashboard/",
@@ -34,6 +44,7 @@ urlpatterns = [
         views.course_students,
         name="course_students",
     ),
+
     # --- SINAV İŞLEMLERİ ---
     path(
         "assessment/<int:assessment_id>/",
@@ -45,6 +56,7 @@ urlpatterns = [
         views.enter_grades,
         name="enter_grades",
     ),
+
     # --- PO EŞLEŞTİRME ---
     path("lo/<int:lo_id>/mapping/", views.lo_mapping_detail, name="lo_mapping_detail"),
     path(
@@ -52,7 +64,8 @@ urlpatterns = [
         views.delete_outcome_mapping,
         name="delete_outcome_mapping",
     ),
-    # --- 🔥 BÖLÜM BAŞKANI (YÖNETİM PANELİ) ---
+
+    # --- BÖLÜM BAŞKANI (YÖNETİM PANELİ) ---
     path(
         "department-head/",
         views.department_head_dashboard,
@@ -84,6 +97,7 @@ urlpatterns = [
         views.delete_program_outcome,
         name="delete_program_outcome",
     ),
+
     # --- ÖĞRENCİ PANELİ ---
     path(
         "student/course/<int:course_id>/",
@@ -96,9 +110,9 @@ urlpatterns = [
         views.student_general_success,
         name="student_general_success",
     ),
-    # 🔥 YENİ EKLENEN: NOTLARIM SAYFASI
+    # NOTLARIM SAYFASI
     path("student/grades/", views.student_grades, name="student_grades"),
-    
-    # 🔥 YENİ EKLENEN: AYARLAR SAYFASI
+
+    # AYARLAR SAYFASI
     path("student/settings/", views.student_settings, name="student_settings"),
 ]

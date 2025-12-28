@@ -1,0 +1,291 @@
+{% extends 'base.html' %}
+
+{% block title %}Ayarlar - Akademisyen Paneli{% endblock %}
+
+{% block content %}
+<style>
+    /* Modern Kart Tasarımı */
+    .settings-container {
+        padding: 20px;
+        max-width: 1100px;
+        margin: 0 auto;
+    }
+
+    /* Sol Profil Kartı */
+    .profile-card {
+        background: #fff;
+        border-radius: 20px;
+        overflow: hidden;
+        box-shadow: 0 10px 30px rgba(0,0,0,0.05);
+        border: none;
+        text-align: center;
+        height: 100%;
+    }
+
+    .profile-header-bg {
+        height: 120px;
+        background: linear-gradient(135deg, #0d6efd 0%, #0dcaf0 100%); /* Mavi Gradyan */
+        position: relative;
+    }
+
+    .profile-avatar {
+        width: 100px;
+        height: 100px;
+        border-radius: 50%;
+        background: #fff;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 2.5rem;
+        font-weight: bold;
+        color: #0d6efd;
+        position: absolute;
+        bottom: -50px;
+        left: 50%;
+        transform: translateX(-50%);
+        box-shadow: 0 5px 15px rgba(0,0,0,0.1);
+        border: 4px solid #fff;
+    }
+
+    .profile-info {
+        padding-top: 60px;
+        padding-bottom: 30px;
+        padding-left: 20px;
+        padding-right: 20px;
+    }
+
+    .profile-name {
+        font-size: 1.4rem;
+        font-weight: 700;
+        color: #333;
+        margin-bottom: 5px;
+    }
+
+    .profile-username {
+        color: #777;
+        font-size: 0.9rem;
+        background: #f8f9fa;
+        padding: 4px 12px;
+        border-radius: 20px;
+        display: inline-block;
+        margin-bottom: 25px;
+    }
+
+    .info-box {
+        background: #f8f9fa;
+        border-radius: 12px;
+        padding: 15px;
+        text-align: left;
+        margin-bottom: 15px;
+        border-left: 4px solid #0d6efd;
+    }
+
+    .info-label {
+        font-size: 0.75rem;
+        text-transform: uppercase;
+        color: #888;
+        font-weight: 600;
+        margin-bottom: 4px;
+        display: block;
+    }
+
+    .info-value {
+        font-size: 1rem;
+        font-weight: 600;
+        color: #333;
+    }
+
+    /* Sağ Form Kartı */
+    .form-card {
+        background: #fff;
+        border-radius: 20px;
+        padding: 40px;
+        box-shadow: 0 10px 30px rgba(0,0,0,0.05);
+        border: none;
+        height: 100%;
+    }
+
+    .form-header {
+        display: flex;
+        align-items: center;
+        margin-bottom: 30px;
+        border-bottom: 1px solid #eee;
+        padding-bottom: 20px;
+    }
+
+    .header-icon {
+        width: 50px;
+        height: 50px;
+        background: #e7f1ff;
+        color: #0d6efd;
+        border-radius: 12px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 1.5rem;
+        margin-right: 15px;
+    }
+
+    .header-title h3 {
+        margin: 0;
+        font-size: 1.5rem;
+        font-weight: 700;
+        color: #333;
+    }
+
+    .header-title p {
+        margin: 0;
+        color: #777;
+        font-size: 0.9rem;
+    }
+
+    /* Form Inputları */
+    .custom-form label {
+        font-weight: 600;
+        color: #555;
+        margin-bottom: 8px;
+        font-size: 0.9rem;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+    }
+
+    .custom-form input {
+        background: #f8f9fa;
+        border: 1px solid #eee;
+        border-radius: 10px;
+        padding: 12px 15px;
+        font-size: 1rem;
+        margin-bottom: 10px; /* Biraz kısalttım */
+        transition: all 0.3s ease;
+    }
+
+    .custom-form input:focus {
+        background: #fff;
+        border-color: #0d6efd;
+        box-shadow: 0 0 0 4px rgba(13, 110, 253, 0.1);
+    }
+    
+    .text-help {
+        font-size: 0.8rem;
+        color: #999;
+        margin-bottom: 20px;
+        display: block;
+    }
+
+    .btn-save {
+        background: linear-gradient(135deg, #0d6efd 0%, #0a58ca 100%);
+        border: none;
+        padding: 12px 30px;
+        font-size: 1rem;
+        font-weight: 600;
+        border-radius: 10px;
+        float: right;
+        transition: transform 0.2s;
+        color: white;
+    }
+
+    .btn-save:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 5px 15px rgba(13, 110, 253, 0.3);
+        color: white;
+    }
+
+</style>
+
+<div class="settings-container">
+    
+    <div class="row g-4">
+        
+        <div class="col-lg-4">
+            <div class="profile-card">
+                <div class="profile-header-bg">
+                    <div class="profile-avatar">
+                        {{ user.first_name|first|default:user.username|first|upper }}
+                    </div>
+                </div>
+                
+                <div class="profile-info">
+                    <h2 class="profile-name">
+                        {% if user.get_full_name %}
+                            {{ user.get_full_name }}
+                        {% else %}
+                            {{ user.username }}
+                        {% endif %}
+                    </h2>
+                    <span class="profile-username">@{{ user.username }}</span>
+
+                    <div class="info-box">
+                        <i class="fas fa-briefcase me-2 text-primary"></i>
+                        <span class="info-label">Unvan / Rol</span>
+                        <div class="info-value">Akademisyen</div>
+                    </div>
+
+                    <div class="info-box" style="border-left-color: #20c997;">
+                        <i class="fas fa-envelope me-2 text-success"></i>
+                        <span class="info-label">E-Posta</span>
+                        <div class="info-value">{{ user.email|default:"Belirtilmemiş" }}</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-lg-8">
+            <div class="form-card">
+                <div class="form-header">
+                    <div class="header-icon">
+                        <i class="fas fa-lock"></i>
+                    </div>
+                    <div class="header-title">
+                        <h3>Güvenlik ve Şifre</h3>
+                        <p>Hesap güvenliğiniz için şifrenizi güncelleyin.</p>
+                    </div>
+                </div>
+
+                <form method="post" class="custom-form">
+                    {% csrf_token %}
+                    
+                    <div class="form-group">
+                        <label for="id_old_password">Mevcut Şifre</label>
+                        {% if password_form.old_password.errors %}
+                            <div class="text-danger small mb-1">
+                                {{ password_form.old_password.errors|striptags }}
+                            </div>
+                        {% endif %}
+                        <input type="password" name="old_password" class="form-control" id="id_old_password" required>
+                        <span class="text-help">Şu an kullandığınız şifreyi giriniz.</span>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="id_new_password1">Yeni Şifre</label>
+                        {% if password_form.new_password1.errors %}
+                            <div class="text-danger small mb-1">
+                                {{ password_form.new_password1.errors|striptags }}
+                            </div>
+                        {% endif %}
+                        <input type="password" name="new_password1" class="form-control" id="id_new_password1" required>
+                        <span class="text-help">En az 8 karakterli, harf ve rakam içeren güçlü bir şifre seçin.</span>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="id_new_password2">Yeni Şifre (Tekrar)</label>
+                        {% if password_form.new_password2.errors %}
+                            <div class="text-danger small mb-1">
+                                {{ password_form.new_password2.errors|striptags }}
+                            </div>
+                        {% endif %}
+                        <input type="password" name="new_password2" class="form-control" id="id_new_password2" required>
+                        <span class="text-help">Yukarıdaki yeni şifreyi onaylamak için tekrar giriniz.</span>
+                    </div>
+
+                    <div class="mt-4 clearfix">
+                        <button type="submit" class="btn btn-save">
+                            <i class="fas fa-save me-2"></i>Değişiklikleri Kaydet
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+
+    </div>
+</div>
+{% endblock %}

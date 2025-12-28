@@ -219,8 +219,8 @@
             {% endif %}
 
             <li style="margin-top: 30px; border-top: 1px solid #34495e;">
-                <a href="{% if not user.is_superuser and 'Öğretmen' not in user.groups.all|join:',' and 'Bölüm Başkanı' not in user.groups.all|join:',' %}{% url 'student_settings' %}{% else %}#{% endif %}"
-                   class="{% if request.resolver_match.url_name == 'student_settings' %}active{% endif %}">
+                <a href="{% if user.is_superuser or 'Öğretmen' in user.groups.all|join:',' or 'Bölüm Başkanı' in user.groups.all|join:',' %}{% url 'teacher_settings' %}{% else %}{% url 'student_settings' %}{% endif %}"
+                   class="{% if request.resolver_match.url_name == 'student_settings' or request.resolver_match.url_name == 'teacher_settings' %}active{% endif %}">
                     <i class="fas fa-cog"></i> Ayarlar
                 </a>
             </li>
@@ -267,7 +267,7 @@
                 
                 <ul class="dropdown-menu dropdown-menu-end shadow border-0" aria-labelledby="dropdownUser1">
                     <li>
-                        <a class="dropdown-item" href="{% if not user.is_superuser and 'Öğretmen' not in user.groups.all|join:',' and 'Bölüm Başkanı' not in user.groups.all|join:',' %}{% url 'student_settings' %}{% else %}#{% endif %}">
+                        <a class="dropdown-item" href="{% if user.is_superuser or 'Öğretmen' in user.groups.all|join:',' or 'Bölüm Başkanı' in user.groups.all|join:',' %}{% url 'teacher_settings' %}{% else %}{% url 'student_settings' %}{% endif %}">
                             <i class="fas fa-user-circle me-2 text-muted"></i> Profil
                         </a>
                     </li>

@@ -5,9 +5,10 @@ from django.contrib.auth import logout
 from django.db.models import Avg, Max, Count
 from django.contrib import messages
 
-# --- EKLENEN KÜTÜPHANELER (AYARLAR İÇİN) ---
+# --- EKLENEN KÜTÜPHANELER ---
 from django.contrib.auth.forms import PasswordChangeForm
 from django.contrib.auth import update_session_auth_hash
+from django.contrib.auth.views import LoginView  # <--- Login için gerekli
 
 from .models import (
     Course,
@@ -680,7 +681,7 @@ def student_general_success(request):
     return render(request, "student_general_success.html", context)
 
 
-# --- ÖĞRENCİ NOTLARIM SAYFASI (GÜNCELLENDİ: Ders Bazlı Gruplama) ---
+# --- ÖĞRENCİ NOTLARIM SAYFASI ---
 @login_required
 def student_grades(request):
     """
@@ -699,7 +700,6 @@ def student_grades(request):
     )
 
     # Veriyi Python tarafında gruplayalım
-    # Yapı: { course_id: {'course': course_obj, 'scores': [], 'total': 0, 'weights': 0} }
     courses_data = {}
 
     for s in all_scores:
@@ -716,9 +716,7 @@ def student_grades(request):
         # Sınavı listeye ekle
         courses_data[course.id]["scores"].append(s)
         
-        # Ağırlıklı ortalama hesabı için veri topla (Basit ortalama değil, ağırlıklı ortalama)
-        # Not: Assessment modelinde 'weight' (yüzde etki) alanı olduğunu varsayıyoruz.
-        # Eğer weight yoksa direkt aritmetik ortalama alırız.
+        # Ağırlıklı ortalama hesabı
         weight = s.assessment.weight if hasattr(s.assessment, 'weight') else 1
         courses_data[course.id]["weighted_sum"] += float(s.score) * float(weight)
         courses_data[course.id]["total_weight"] += float(weight)
@@ -727,10 +725,7 @@ def student_grades(request):
     grouped_grades = []
     for cid, data in courses_data.items():
         if data["total_weight"] > 0:
-            # Eğer ağırlık sistemi varsa
             avg = data["weighted_sum"] / data["total_weight"]
-            # Eğer weight yüzdelikse (örn toplam 100 değilse) ve basit ortalama isteniyorsa:
-            # avg = data["weighted_sum"] / len(data["scores"]) # (Basit aritmetik için bunu açabilirsin)
         else:
             avg = 0
             
@@ -741,7 +736,7 @@ def student_grades(request):
     return render(request, "student_grades.html", context)
 
 
-# --- ÖĞRENCİ AYARLAR SAYFASI (YENİ EKLENDİ) ---
+# --- ÖĞRENCİ AYARLAR SAYFASI ---
 @login_required
 def student_settings(request):
     """
@@ -758,7 +753,6 @@ def student_settings(request):
         password_form = PasswordChangeForm(user, request.POST)
         if password_form.is_valid():
             user = password_form.save()
-            # Oturumun düşmemesi için hash güncelliyoruz
             update_session_auth_hash(request, user)
             messages.success(request, 'Şifreniz başarıyla güncellendi!')
             return redirect('student_settings')
@@ -772,6 +766,36 @@ def student_settings(request):
         'password_form': password_form
     }
     return render(request, "student_settings.html", context)
+
+
+# --- 🔥 YENİ EKLENEN: ÖĞRETMEN AYARLAR SAYFASI ---
+@login_required
+@user_passes_test(is_teacher)
+def teacher_settings(request):
+    """
+    Öğretmen profil bilgileri ve şifre değiştirme ekranı.
+    Tasarım öğrenci paneliyle birebir uyumlu olacak.
+    """
+    user = request.user
+
+    # Şifre Değiştirme İşlemi
+    if request.method == 'POST':
+        password_form = PasswordChangeForm(user, request.POST)
+        if password_form.is_valid():
+            user = password_form.save()
+            update_session_auth_hash(request, user) # Oturum düşmesin
+            messages.success(request, 'Şifreniz başarıyla güncellendi!')
+            return redirect('teacher_settings')
+        else:
+            messages.error(request, 'Lütfen hataları düzeltin.')
+    else:
+        password_form = PasswordChangeForm(user)
+
+    context = {
+        'user': user,
+        'password_form': password_form
+    }
+    return render(request, "teacher_settings.html", context)
 
 
 # 🔥 TRAFİK POLİSİ (YÖNLENDİRME MERKEZİ)
@@ -794,7 +818,57 @@ def home_redirect(request):
         return redirect("student_course_list")
 
     # 4. HİÇBİRİ DEĞİLSE -> HATA VER VE AT
-    # Kullanıcıya "Rolün yok" demek yerine genel bir hata veriyoruz.
     messages.error(request, "Hatalı kullanıcı adı veya şifre.")
     logout(request)
     return redirect("login")
+
+def landing_page(request):
+    """
+    Kullanıcı giriş yapmamışsa 'Giriş Türü Seçiniz' (landing_page.html) ekranını gösterir.
+    Eğer zaten giriş yapmışsa direkt paneline yönlendirir.
+    """
+    if request.user.is_authenticated:
+        return home_redirect(request)
+    return render(request, "landing_page.html")
+
+
+# --- ÖZEL GİRİŞ KONTROLÜ (ROLE CHECK) ---
+
+class CustomLoginView(LoginView):
+    """
+    Standart giriş işlemini özelleştirir.
+    Hangi linkten gelindiğine (?role=...) bakar ve kullanıcının yetkisini kontrol eder.
+    """
+    def form_valid(self, form):
+        # Önce standart girişi yap (Kullanıcı adı şifre doğru mu?)
+        auth_login_func = super().form_valid(form)
+        
+        user = self.request.user
+        role = self.request.GET.get('role') # URL'den gelen ?role=... bilgisini al
+
+        # Eğer rol belirtilmişse kontrol et
+        if role:
+            # 1. ÖĞRENCİ KAPISI KONTROLÜ
+            if role == 'student':
+                if not hasattr(user, 'student'):
+                    messages.error(self.request, "⛔ Hata: Bu kapıdan sadece Öğrenciler giriş yapabilir. Akademisyen girişi için geri dönün.")
+                    logout(self.request) # İçeri alma, at
+                    return redirect(f'/login/?role={role}')
+            
+            # 2. AKADEMİSYEN KAPISI KONTROLÜ
+            elif role == 'teacher':
+                is_teacher = user.groups.filter(name__in=['Öğretmen', 'Bölüm Başkanı']).exists() or user.is_superuser
+                if not is_teacher:
+                    messages.error(self.request, "⛔ Hata: Bu kapıdan sadece Akademisyenler giriş yapabilir.")
+                    logout(self.request)
+                    return redirect(f'/login/?role={role}')
+
+            # 3. BÖLÜM BAŞKANI KAPISI KONTROLÜ
+            elif role == 'manager':
+                is_manager = user.groups.filter(name='Bölüm Başkanı').exists() or user.is_superuser
+                if not is_manager:
+                    messages.error(self.request, "⛔ Hata: Bu alana sadece Bölüm Başkanları girebilir.")
+                    logout(self.request)
+                    return redirect(f'/login/?role={role}')
+
+        return auth_login_func

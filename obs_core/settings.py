@@ -109,9 +109,13 @@ STATIC_URL = "static/"
 
 DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
 
-# Giriş yapan kişiyi kimliğine göre yönlendiren fonksiyona yolla
+# --- GİRİŞ / ÇIKIŞ AYARLARI ---
+
+# 1. Giriş yapan kişiyi (Trafik Polisine) yönlendir
 LOGIN_REDIRECT_URL = "home_redirect"
 
-# Çıkış yaparsa tekrar Login ekranına dön
-LOGOUT_REDIRECT_URL = "login"
+# 2. Çıkış yapınca KARŞILAMA EKRANINA (3 butonlu sayfa) dön
+LOGOUT_REDIRECT_URL = "landing_page"
+
+# 3. Yetkisiz giriş denemesinde Login sayfasına at
 LOGIN_URL = "login"
