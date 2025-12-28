@@ -1,0 +1,141 @@
+{% extends 'base.html' %}
+
+{% block title %}{{ student.user.get_full_name }} - PO Analizi{% endblock %}
+
+{% block content %}
+<style>
+    /* Grafik taşmasını önleyen sabitleyici stil */
+    .chart-container {
+        position: relative;
+        height: 400px; /* Yüksekliği sabitledik */
+        width: 100%;
+    }
+</style>
+
+<div class="container-fluid">
+    
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <div>
+            <h3 class="fw-bold text-dark mb-1">
+                <i class="fas fa-user-graduate me-2 text-primary"></i>
+                {% if student.user %}
+                    {{ student.user.get_full_name }}
+                {% else %}
+                    Öğrenci
+                {% endif %}
+            </h3>
+            <p class="text-muted mb-0">Program Yeterlilik Analizi (Tüm Dersler)</p>
+        </div>
+        <a href="{% url 'teacher_po_report_list' %}" class="btn btn-secondary btn-sm">
+            <i class="fas fa-arrow-left me-1"></i> Listeye Dön
+        </a>
+    </div>
+
+    <div class="row">
+        <div class="col-lg-6 mb-4">
+            <div class="card h-100 shadow-sm border-0">
+                <div class="card-header bg-white py-3 border-0">
+                    <h5 class="mb-0 fw-bold text-dark">Yetenek Radarı</h5>
+                </div>
+                <div class="card-body">
+                    <div class="chart-container">
+                        <canvas id="poRadarChart"></canvas>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-lg-6 mb-4">
+            <div class="card h-100 shadow-sm border-0">
+                <div class="card-header bg-white py-3 border-0">
+                    <h5 class="mb-0 fw-bold text-dark">Program Çıktıları (PO) Detayı</h5>
+                </div>
+                <div class="card-body p-0">
+                    <div class="table-responsive">
+                        <table class="table table-hover mb-0 align-middle">
+                            <thead class="table-light">
+                                <tr>
+                                    <th class="ps-4">Kod</th>
+                                    <th>Tanım</th>
+                                    <th class="text-end pe-4">Başarım</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for po in po_details %}
+                                <tr>
+                                    <td class="ps-4 fw-bold text-dark">{{ po.code }}</td>
+                                    <td class="text-muted small" style="max-width: 250px;">{{ po.description }}</td>
+                                    <td class="text-end pe-4">
+                                        <div class="d-flex align-items-center justify-content-end">
+                                            <span class="fw-bold text-{{ po.color }} me-2">
+                                                %{{ po.score }}
+                                            </span>
+                                            <div class="progress" style="width: 60px; height: 6px;">
+                                                <div class="progress-bar bg-{{ po.color }}" 
+                                                     role="progressbar" 
+                                                     style="width: {{ po.score }}%">
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+    document.addEventListener("DOMContentLoaded", function() {
+        const ctx = document.getElementById('poRadarChart').getContext('2d');
+        const labels = {{ po_labels|safe }};
+        const dataValues = {{ po_scores|safe }};
+
+        new Chart(ctx, {
+            type: 'radar',
+            data: {
+                labels: labels,
+                datasets: [{
+                    label: 'Başarım (%)',
+                    data: dataValues,
+                    backgroundColor: 'rgba(46, 204, 113, 0.2)',
+                    borderColor: '#2ecc71',
+                    pointBackgroundColor: '#27ae60',
+                    pointBorderColor: '#fff',
+                    pointHoverBackgroundColor: '#fff',
+                    pointHoverBorderColor: '#27ae60',
+                    borderWidth: 2
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false, // Kapsayıcıya uyması için false kalmalı
+                scales: {
+                    r: {
+                        angleLines: { color: '#eee' },
+                        grid: { color: '#f0f0f0' },
+                        pointLabels: { font: { size: 12, weight: 'bold' }, color: '#555' },
+                        suggestedMin: 0,
+                        suggestedMax: 100,
+                        ticks: { stepSize: 20, backdropColor: 'transparent', font: { size: 10 } }
+                    }
+                },
+                plugins: {
+                    legend: { display: false },
+                    tooltip: {
+                        backgroundColor: 'rgba(0,0,0,0.8)',
+                        padding: 10,
+                        callbacks: {
+                            label: function(context) { return context.label + ': %' + context.raw; }
+                        }
+                    }
+                }
+            }
+        });
+    });
+</script>
+{% endblock %}

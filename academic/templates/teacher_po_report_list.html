@@ -1,0 +1,84 @@
+{% extends 'base.html' %}
+
+{% block title %}Öğrenci Yeterlilik (PO) Raporları{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <h3 class="mb-4 text-dark fw-bold">
+        <i class="fas fa-chart-pie me-2 text-primary"></i>Öğrenci Yeterlilik Raporları
+    </h3>
+
+    <div class="card shadow-sm border-0">
+        <div class="card-body">
+            <p class="text-muted mb-4">
+                Aşağıdaki listede, verdiğiniz dersleri alan öğrenciler bulunmaktadır. 
+                Detaylı PO (Program Çıktısı) analizini görmek için öğrencinin adına tıklayın.
+            </p>
+
+            {% if students %}
+            <div class="table-responsive">
+                <table class="table table-hover align-middle">
+                    <thead class="table-light">
+                        <tr>
+                            <th scope="col">Öğrenci No</th>
+                            <th scope="col">Ad Soyad</th>
+                            <th scope="col">Bölüm</th>
+                            <th scope="col" class="text-end">İşlem</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for student in students %}
+                        <tr>
+                            <td class="fw-bold text-primary">{{ student.student_id }}</td>
+                            <td>
+                                <div class="d-flex align-items-center">
+                                    <div class="bg-light text-primary rounded-circle d-flex justify-content-center align-items-center me-3 fw-bold" style="width: 40px; height: 40px;">
+                                        {% if student.user %}
+                                            {{ student.user.first_name|first|default:student.user.username|first|upper }}
+                                        {% else %}
+                                            ?
+                                        {% endif %}
+                                    </div>
+                                    
+                                    <div>
+                                        <h6 class="mb-0 text-dark">
+                                            {% if student.user %}
+                                                {{ student.user.get_full_name|default:student.user.username }}
+                                            {% else %}
+                                                <span class="text-danger fst-italic">Kullanıcı Verisi Eksik</span>
+                                            {% endif %}
+                                        </h6>
+                                        <small class="text-muted">
+                                            {% if student.user %}
+                                                {{ student.user.email }}
+                                            {% else %}
+                                                (Email yok)
+                                            {% endif %}
+                                        </small>
+                                    </div>
+                                </div>
+                            </td>
+                            <td>
+                                <span class="badge bg-secondary bg-opacity-10 text-secondary border border-secondary border-opacity-25 rounded-pill px-3">
+                                    {{ student.department }}
+                                </span>
+                            </td>
+                            <td class="text-end">
+                                <a href="{% url 'teacher_student_po_detail' student.id %}" class="btn btn-sm btn-outline-primary rounded-pill px-3">
+                                    <i class="fas fa-eye me-1"></i> Raporu Gör
+                                </a>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+            {% else %}
+                <div class="alert alert-warning border-0 shadow-sm">
+                    <i class="fas fa-exclamation-triangle me-2"></i>Henüz derslerinize kayıtlı öğrenci bulunmuyor.
+                </div>
+            {% endif %}
+        </div>
+    </div>
+</div>
+{% endblock %}

@@ -8,7 +8,7 @@ from django.contrib import messages
 # --- EKLENEN KÜTÜPHANELER ---
 from django.contrib.auth.forms import PasswordChangeForm
 from django.contrib.auth import update_session_auth_hash
-from django.contrib.auth.views import LoginView  # <--- Login için gerekli
+from django.contrib.auth.views import LoginView
 
 from .models import (
     Course,
@@ -768,13 +768,12 @@ def student_settings(request):
     return render(request, "student_settings.html", context)
 
 
-# --- 🔥 YENİ EKLENEN: ÖĞRETMEN AYARLAR SAYFASI ---
+# --- ÖĞRETMEN AYARLAR SAYFASI ---
 @login_required
 @user_passes_test(is_teacher)
 def teacher_settings(request):
     """
     Öğretmen profil bilgileri ve şifre değiştirme ekranı.
-    Tasarım öğrenci paneliyle birebir uyumlu olacak.
     """
     user = request.user
 
@@ -796,6 +795,128 @@ def teacher_settings(request):
         'password_form': password_form
     }
     return render(request, "teacher_settings.html", context)
+
+
+# --- 🔥 YENİ EKLENEN: ÖĞRETMEN İÇİN PO RAPORLARI ---
+
+@login_required
+@user_passes_test(is_teacher)
+def teacher_po_report_list(request):
+    """
+    Öğretmenin verdiği dersleri alan öğrencilerin listesini gösterir.
+    """
+    # 1. Öğretmenin verdiği dersleri bul
+    if is_department_head(request.user):
+        courses = Course.objects.all()
+    else:
+        courses = Course.objects.filter(teacher=request.user)
+
+    # 2. Bu derslere kayıtlı öğrencileri bul (Tekrar edenleri temizle - distinct)
+    # Enrollment üzerinden gidiyoruz
+    enrollments = Enrollment.objects.filter(course__in=courses).select_related('student', 'student__user')
+    
+    # Öğrencileri benzersiz yapalım (Python tarafında set kullanarak)
+    student_set = set()
+    students_list = []
+    
+    for enrollment in enrollments:
+        if enrollment.student.id not in student_set:
+            student_set.add(enrollment.student.id)
+            students_list.append(enrollment.student)
+
+    # Listeyi öğrenci numarasına göre sıralayalım
+    students_list.sort(key=lambda s: s.student_id)
+
+    return render(request, "teacher_po_report_list.html", {"students": students_list})
+
+
+@login_required
+@user_passes_test(is_teacher)
+def teacher_student_po_detail(request, student_id):
+    """
+    Seçilen öğrencinin Genel Başarım (Radar Grafiği) sayfasını öğretmene gösterir.
+    Kod mantığı 'student_general_success' ile aynıdır, sadece hedef öğrenci dinamiktir.
+    """
+    target_student = get_object_or_404(Student, id=student_id)
+    
+    # --- HESAPLAMA MANTIĞI (Öğrenci Paneliyle Aynı) ---
+    all_pos = ProgramOutcome.objects.all()
+    po_buckets = {
+        po.code: {"earned": 0, "max": 0, "desc": po.description} for po in all_pos
+    }
+    
+    # Sadece öğretmenin dersleri değil, öğrencinin TÜM dersleri baz alınarak genel başarım hesaplanır
+    enrollments = Enrollment.objects.filter(student=target_student)
+    
+    for enrollment in enrollments:
+        course = enrollment.course
+        assessments = Assessment.objects.filter(course=course)
+        student_scores = StudentScore.objects.filter(
+            student=target_student, assessment__in=assessments
+        )
+        score_map = {s.assessment.id: s.score for s in student_scores}
+        
+        learning_outcomes = LearningOutcome.objects.filter(course=course)
+        
+        for lo in learning_outcomes:
+            relevant_weights = AssessmentWeight.objects.filter(learning_outcome=lo)
+            lo_total = 0
+            lo_max_possible = 0
+            
+            for aw in relevant_weights:
+                if aw.assessment.id in score_map:
+                    lo_total += float(score_map[aw.assessment.id]) * float(aw.percentage)
+                    lo_max_possible += 100 * float(aw.percentage)
+            
+            lo_success_rate = 0
+            if lo_max_possible > 0:
+                lo_success_rate = (lo_total / lo_max_possible) * 100
+                
+            mappings = OutcomeMapping.objects.filter(learning_outcome=lo)
+            for mapping in mappings:
+                po_code = mapping.program_outcome.code
+                weight = float(mapping.weight)
+                
+                contribution = lo_success_rate * weight
+                max_contribution = 100 * weight
+                
+                po_buckets[po_code]["earned"] += contribution
+                po_buckets[po_code]["max"] += max_contribution
+
+    po_labels = []
+    po_scores = []
+    po_details = []
+    
+    for code, data in po_buckets.items():
+        final_score = 0
+        if data["max"] > 0:
+            final_score = round((data["earned"] / data["max"]) * 100, 1)
+
+        po_labels.append(code)
+        po_scores.append(final_score)
+        
+        color = (
+            "success"
+            if final_score >= 70
+            else "warning" if final_score >= 50 else "danger"
+        )
+        
+        po_details.append(
+            {
+                "code": code,
+                "description": data["desc"],
+                "score": final_score,
+                "color": color,
+            }
+        )
+
+    context = {
+        "student": target_student,
+        "po_labels": json.dumps(po_labels),
+        "po_scores": json.dumps(po_scores),
+        "po_details": po_details,
+    }
+    return render(request, "teacher_student_po_detail.html", context)
 
 
 # 🔥 TRAFİK POLİSİ (YÖNLENDİRME MERKEZİ)

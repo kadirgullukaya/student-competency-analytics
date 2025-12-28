@@ -27,11 +27,14 @@ urlpatterns = [
         views.teacher_dashboard_home,
         name="teacher_dashboard_home",
     ),
-    # 🔥 YENİ EKLENEN: ÖĞRETMEN AYARLAR SAYFASI
     path("teacher-dashboard/settings/", views.teacher_settings, name="teacher_settings"),
     
     path("teacher-courses/", views.teacher_courses, name="teacher_courses"),
     path("exams/", views.exam_list, name="exam_list"),
+
+    # 🔥 YENİ EKLENEN: ÖĞRETMEN PO RAPORLARI
+    path("teacher-po-reports/", views.teacher_po_report_list, name="teacher_po_report_list"),
+    path("teacher-po-reports/student/<int:student_id>/", views.teacher_student_po_detail, name="teacher_student_po_detail"),
 
     # --- DERS DETAYLARI & İÇERİK ---
     path(
