@@ -64,7 +64,16 @@ def teacher_dashboard_home(request):
             my_courses = Course.objects.all()
 
     total_courses = my_courses.count()
-    total_students = Enrollment.objects.filter(course__in=my_courses).distinct().count()
+
+    # --- DÜZELTME YAPILDI: ARTIK TEKİL ÖĞRENCİLERİ SAYIYOR ---
+    total_students = (
+        Enrollment.objects.filter(course__in=my_courses)
+        .values("student")  # Sadece öğrenci ID'lerini al
+        .distinct()  # Aynı ID'yi birden fazla sayma
+        .count()
+    )
+    # ---------------------------------------------------------
+
     total_exams = Assessment.objects.filter(course__in=my_courses).count()
     recent_exams = Assessment.objects.filter(course__in=my_courses).order_by("-date")[
         :5
@@ -710,14 +719,14 @@ def student_grades(request):
                 "scores": [],
                 "weighted_sum": 0,
                 "total_weight": 0,
-                "average": 0
+                "average": 0,
             }
-        
+
         # Sınavı listeye ekle
         courses_data[course.id]["scores"].append(s)
-        
+
         # Ağırlıklı ortalama hesabı
-        weight = s.assessment.weight if hasattr(s.assessment, 'weight') else 1
+        weight = s.assessment.weight if hasattr(s.assessment, "weight") else 1
         courses_data[course.id]["weighted_sum"] += float(s.score) * float(weight)
         courses_data[course.id]["total_weight"] += float(weight)
 
@@ -728,7 +737,7 @@ def student_grades(request):
             avg = data["weighted_sum"] / data["total_weight"]
         else:
             avg = 0
-            
+
         data["average"] = round(avg, 1)
         grouped_grades.append(data)
 
@@ -744,27 +753,24 @@ def student_settings(request):
     """
     if not hasattr(request.user, "student"):
         return redirect("teacher_dashboard_home")
-    
+
     student = request.user.student
     user = request.user
 
     # Şifre Değiştirme İşlemi
-    if request.method == 'POST':
+    if request.method == "POST":
         password_form = PasswordChangeForm(user, request.POST)
         if password_form.is_valid():
             user = password_form.save()
             update_session_auth_hash(request, user)
-            messages.success(request, 'Şifreniz başarıyla güncellendi!')
-            return redirect('student_settings')
+            messages.success(request, "Şifreniz başarıyla güncellendi!")
+            return redirect("student_settings")
         else:
-            messages.error(request, 'Lütfen hataları düzeltin.')
+            messages.error(request, "Lütfen hataları düzeltin.")
     else:
         password_form = PasswordChangeForm(user)
 
-    context = {
-        'student': student,
-        'password_form': password_form
-    }
+    context = {"student": student, "password_form": password_form}
     return render(request, "student_settings.html", context)
 
 
@@ -778,26 +784,24 @@ def teacher_settings(request):
     user = request.user
 
     # Şifre Değiştirme İşlemi
-    if request.method == 'POST':
+    if request.method == "POST":
         password_form = PasswordChangeForm(user, request.POST)
         if password_form.is_valid():
             user = password_form.save()
-            update_session_auth_hash(request, user) # Oturum düşmesin
-            messages.success(request, 'Şifreniz başarıyla güncellendi!')
-            return redirect('teacher_settings')
+            update_session_auth_hash(request, user)  # Oturum düşmesin
+            messages.success(request, "Şifreniz başarıyla güncellendi!")
+            return redirect("teacher_settings")
         else:
-            messages.error(request, 'Lütfen hataları düzeltin.')
+            messages.error(request, "Lütfen hataları düzeltin.")
     else:
         password_form = PasswordChangeForm(user)
 
-    context = {
-        'user': user,
-        'password_form': password_form
-    }
+    context = {"user": user, "password_form": password_form}
     return render(request, "teacher_settings.html", context)
 
 
 # --- 🔥 YENİ EKLENEN: ÖĞRETMEN İÇİN PO RAPORLARI ---
+
 
 @login_required
 @user_passes_test(is_teacher)
@@ -813,12 +817,14 @@ def teacher_po_report_list(request):
 
     # 2. Bu derslere kayıtlı öğrencileri bul (Tekrar edenleri temizle - distinct)
     # Enrollment üzerinden gidiyoruz
-    enrollments = Enrollment.objects.filter(course__in=courses).select_related('student', 'student__user')
-    
+    enrollments = Enrollment.objects.filter(course__in=courses).select_related(
+        "student", "student__user"
+    )
+
     # Öğrencileri benzersiz yapalım (Python tarafında set kullanarak)
     student_set = set()
     students_list = []
-    
+
     for enrollment in enrollments:
         if enrollment.student.id not in student_set:
             student_set.add(enrollment.student.id)
@@ -838,16 +844,16 @@ def teacher_student_po_detail(request, student_id):
     Kod mantığı 'student_general_success' ile aynıdır, sadece hedef öğrenci dinamiktir.
     """
     target_student = get_object_or_404(Student, id=student_id)
-    
+
     # --- HESAPLAMA MANTIĞI (Öğrenci Paneliyle Aynı) ---
     all_pos = ProgramOutcome.objects.all()
     po_buckets = {
         po.code: {"earned": 0, "max": 0, "desc": po.description} for po in all_pos
     }
-    
+
     # Sadece öğretmenin dersleri değil, öğrencinin TÜM dersleri baz alınarak genel başarım hesaplanır
     enrollments = Enrollment.objects.filter(student=target_student)
-    
+
     for enrollment in enrollments:
         course = enrollment.course
         assessments = Assessment.objects.filter(course=course)
@@ -855,38 +861,40 @@ def teacher_student_po_detail(request, student_id):
             student=target_student, assessment__in=assessments
         )
         score_map = {s.assessment.id: s.score for s in student_scores}
-        
+
         learning_outcomes = LearningOutcome.objects.filter(course=course)
-        
+
         for lo in learning_outcomes:
             relevant_weights = AssessmentWeight.objects.filter(learning_outcome=lo)
             lo_total = 0
             lo_max_possible = 0
-            
+
             for aw in relevant_weights:
                 if aw.assessment.id in score_map:
-                    lo_total += float(score_map[aw.assessment.id]) * float(aw.percentage)
+                    lo_total += float(score_map[aw.assessment.id]) * float(
+                        aw.percentage
+                    )
                     lo_max_possible += 100 * float(aw.percentage)
-            
+
             lo_success_rate = 0
             if lo_max_possible > 0:
                 lo_success_rate = (lo_total / lo_max_possible) * 100
-                
+
             mappings = OutcomeMapping.objects.filter(learning_outcome=lo)
             for mapping in mappings:
                 po_code = mapping.program_outcome.code
                 weight = float(mapping.weight)
-                
+
                 contribution = lo_success_rate * weight
                 max_contribution = 100 * weight
-                
+
                 po_buckets[po_code]["earned"] += contribution
                 po_buckets[po_code]["max"] += max_contribution
 
     po_labels = []
     po_scores = []
     po_details = []
-    
+
     for code, data in po_buckets.items():
         final_score = 0
         if data["max"] > 0:
@@ -894,13 +902,13 @@ def teacher_student_po_detail(request, student_id):
 
         po_labels.append(code)
         po_scores.append(final_score)
-        
+
         color = (
             "success"
             if final_score >= 70
             else "warning" if final_score >= 50 else "danger"
         )
-        
+
         po_details.append(
             {
                 "code": code,
@@ -943,6 +951,7 @@ def home_redirect(request):
     logout(request)
     return redirect("login")
 
+
 def landing_page(request):
     """
     Kullanıcı giriş yapmamışsa 'Giriş Türü Seçiniz' (landing_page.html) ekranını gösterir.
@@ -955,41 +964,58 @@ def landing_page(request):
 
 # --- ÖZEL GİRİŞ KONTROLÜ (ROLE CHECK) ---
 
+
 class CustomLoginView(LoginView):
     """
     Standart giriş işlemini özelleştirir.
     Hangi linkten gelindiğine (?role=...) bakar ve kullanıcının yetkisini kontrol eder.
     """
+
     def form_valid(self, form):
         # Önce standart girişi yap (Kullanıcı adı şifre doğru mu?)
         auth_login_func = super().form_valid(form)
-        
+
         user = self.request.user
-        role = self.request.GET.get('role') # URL'den gelen ?role=... bilgisini al
+        role = self.request.GET.get("role")  # URL'den gelen ?role=... bilgisini al
 
         # Eğer rol belirtilmişse kontrol et
         if role:
             # 1. ÖĞRENCİ KAPISI KONTROLÜ
-            if role == 'student':
-                if not hasattr(user, 'student'):
-                    messages.error(self.request, "⛔ Hata: Bu kapıdan sadece Öğrenciler giriş yapabilir. Akademisyen girişi için geri dönün.")
-                    logout(self.request) # İçeri alma, at
-                    return redirect(f'/login/?role={role}')
-            
+            if role == "student":
+                if not hasattr(user, "student"):
+                    messages.error(
+                        self.request,
+                        "⛔ Hata: Bu kapıdan sadece Öğrenciler giriş yapabilir. Akademisyen girişi için geri dönün.",
+                    )
+                    logout(self.request)  # İçeri alma, at
+                    return redirect(f"/login/?role={role}")
+
             # 2. AKADEMİSYEN KAPISI KONTROLÜ
-            elif role == 'teacher':
-                is_teacher = user.groups.filter(name__in=['Öğretmen', 'Bölüm Başkanı']).exists() or user.is_superuser
+            elif role == "teacher":
+                is_teacher = (
+                    user.groups.filter(name__in=["Öğretmen", "Bölüm Başkanı"]).exists()
+                    or user.is_superuser
+                )
                 if not is_teacher:
-                    messages.error(self.request, "⛔ Hata: Bu kapıdan sadece Akademisyenler giriş yapabilir.")
+                    messages.error(
+                        self.request,
+                        "⛔ Hata: Bu kapıdan sadece Akademisyenler giriş yapabilir.",
+                    )
                     logout(self.request)
-                    return redirect(f'/login/?role={role}')
+                    return redirect(f"/login/?role={role}")
 
             # 3. BÖLÜM BAŞKANI KAPISI KONTROLÜ
-            elif role == 'manager':
-                is_manager = user.groups.filter(name='Bölüm Başkanı').exists() or user.is_superuser
+            elif role == "manager":
+                is_manager = (
+                    user.groups.filter(name="Bölüm Başkanı").exists()
+                    or user.is_superuser
+                )
                 if not is_manager:
-                    messages.error(self.request, "⛔ Hata: Bu alana sadece Bölüm Başkanları girebilir.")
+                    messages.error(
+                        self.request,
+                        "⛔ Hata: Bu alana sadece Bölüm Başkanları girebilir.",
+                    )
                     logout(self.request)
-                    return redirect(f'/login/?role={role}')
+                    return redirect(f"/login/?role={role}")
 
         return auth_login_func
