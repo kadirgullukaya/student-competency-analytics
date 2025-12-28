@@ -219,7 +219,8 @@
             {% endif %}
 
             <li style="margin-top: 30px; border-top: 1px solid #34495e;">
-                <a href="#">
+                <a href="{% if not user.is_superuser and 'Öğretmen' not in user.groups.all|join:',' and 'Bölüm Başkanı' not in user.groups.all|join:',' %}{% url 'student_settings' %}{% else %}#{% endif %}"
+                   class="{% if request.resolver_match.url_name == 'student_settings' %}active{% endif %}">
                     <i class="fas fa-cog"></i> Ayarlar
                 </a>
             </li>
@@ -247,18 +248,36 @@
 
             <div class="dropdown">
                 <a href="#" class="d-flex align-items-center text-decoration-none text-dark dropdown-toggle" id="dropdownUser1" data-bs-toggle="dropdown" aria-expanded="false">
-                    <div class="bg-primary text-white rounded-circle d-flex justify-content-center align-items-center me-2" style="width: 35px; height: 35px;">
+                    <div class="bg-primary text-white rounded-circle d-flex justify-content-center align-items-center me-2 shadow-sm" style="width: 40px; height: 40px;">
                         {{ user.username|first|upper }}
                     </div>
-                    <span class="d-none d-sm-inline mx-1">{{ user.username|title }}</span>
+                    
+                    <div class="d-none d-sm-flex flex-column align-items-start mx-1" style="line-height: 1.2;">
+                        <span class="fw-bold text-dark" style="font-size: 0.9rem;">{{ user.username|title }}</span>
+                        
+                        {% if "Öğretmen" in user.groups.all|join:"," or "Bölüm Başkanı" in user.groups.all|join:"," or user.is_superuser %}
+                             <small class="text-muted" style="font-size: 0.7rem;">Akademisyen</small>
+                        {% else %}
+                             <small class="text-muted" style="font-size: 0.7rem;">
+                                {{ user.student.department|default:"Bölüm Yok" }}
+                             </small>
+                        {% endif %}
+                    </div>
                 </a>
+                
                 <ul class="dropdown-menu dropdown-menu-end shadow border-0" aria-labelledby="dropdownUser1">
-                    <li><a class="dropdown-item" href="#">Profil</a></li>
+                    <li>
+                        <a class="dropdown-item" href="{% if not user.is_superuser and 'Öğretmen' not in user.groups.all|join:',' and 'Bölüm Başkanı' not in user.groups.all|join:',' %}{% url 'student_settings' %}{% else %}#{% endif %}">
+                            <i class="fas fa-user-circle me-2 text-muted"></i> Profil
+                        </a>
+                    </li>
                     <li><hr class="dropdown-divider"></li>
                     <li>
                         <form action="{% url 'logout' %}" method="post">
                             {% csrf_token %}
-                            <button type="submit" class="dropdown-item text-danger">Çıkış Yap</button>
+                            <button type="submit" class="dropdown-item text-danger">
+                                <i class="fas fa-sign-out-alt me-2"></i> Çıkış Yap
+                            </button>
                         </form>
                     </li>
                 </ul>

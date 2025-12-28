@@ -98,4 +98,7 @@ urlpatterns = [
     ),
     # 🔥 YENİ EKLENEN: NOTLARIM SAYFASI
     path("student/grades/", views.student_grades, name="student_grades"),
+    
+    # 🔥 YENİ EKLENEN: AYARLAR SAYFASI
+    path("student/settings/", views.student_settings, name="student_settings"),
 ]

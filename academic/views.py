@@ -4,6 +4,11 @@ from django.contrib.auth.decorators import login_required, user_passes_test
 from django.contrib.auth import logout
 from django.db.models import Avg, Max, Count
 from django.contrib import messages
+
+# --- EKLENEN KÜTÜPHANELER (AYARLAR İÇİN) ---
+from django.contrib.auth.forms import PasswordChangeForm
+from django.contrib.auth import update_session_auth_hash
+
 from .models import (
     Course,
     LearningOutcome,
@@ -734,6 +739,39 @@ def student_grades(request):
 
     context = {"grouped_grades": grouped_grades}
     return render(request, "student_grades.html", context)
+
+
+# --- ÖĞRENCİ AYARLAR SAYFASI (YENİ EKLENDİ) ---
+@login_required
+def student_settings(request):
+    """
+    Öğrencinin profil bilgilerini gördüğü ve şifresini değiştirebildiği sayfa.
+    """
+    if not hasattr(request.user, "student"):
+        return redirect("teacher_dashboard_home")
+    
+    student = request.user.student
+    user = request.user
+
+    # Şifre Değiştirme İşlemi
+    if request.method == 'POST':
+        password_form = PasswordChangeForm(user, request.POST)
+        if password_form.is_valid():
+            user = password_form.save()
+            # Oturumun düşmemesi için hash güncelliyoruz
+            update_session_auth_hash(request, user)
+            messages.success(request, 'Şifreniz başarıyla güncellendi!')
+            return redirect('student_settings')
+        else:
+            messages.error(request, 'Lütfen hataları düzeltin.')
+    else:
+        password_form = PasswordChangeForm(user)
+
+    context = {
+        'student': student,
+        'password_form': password_form
+    }
+    return render(request, "student_settings.html", context)
 
 
 # 🔥 TRAFİK POLİSİ (YÖNLENDİRME MERKEZİ)

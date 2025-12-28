@@ -1,0 +1,297 @@
+{% extends 'base.html' %}
+
+{% block content %}
+
+<style>
+    /* Animasyon */
+    @keyframes fadeInUp {
+        from { opacity: 0; transform: translateY(20px); }
+        to { opacity: 1; transform: translateY(0); }
+    }
+
+    .animate-enter {
+        animation: fadeInUp 0.5s ease-out forwards;
+    }
+
+    /* Kart Yapıları */
+    .premium-card {
+        background: #fff;
+        border: none;
+        border-radius: 20px;
+        box-shadow: 0 15px 35px rgba(0,0,0,0.06);
+        overflow: hidden;
+        position: relative;
+        height: 100%;
+        transition: transform 0.3s ease, box-shadow 0.3s ease;
+    }
+
+    .premium-card:hover {
+        transform: translateY(-5px);
+        box-shadow: 0 20px 40px rgba(0,0,0,0.08);
+    }
+
+    /* Sol Profil Tasarımı - MAVİ TEMA */
+    .profile-cover {
+        height: 150px;
+        /* Yeni Renk: Koyu Mavi'den Açık Maviye Geçiş */
+        background: linear-gradient(135deg, #0061ff 0%, #60efff 100%);
+        position: relative;
+    }
+
+    .profile-cover::after {
+        content: '';
+        position: absolute;
+        bottom: 0;
+        left: 0;
+        width: 100%;
+        height: 40px;
+        background: #fff;
+        border-radius: 50% 50% 0 0 / 100% 100% 0 0; /* Kavisli geçiş */
+        transform: scaleX(1.5);
+    }
+
+    .avatar-box {
+        position: relative;
+        margin-top: -80px;
+        display: flex;
+        justify-content: center;
+        z-index: 2;
+    }
+
+    .avatar-circle {
+        width: 120px;
+        height: 120px;
+        border-radius: 50%;
+        background: #fff;
+        padding: 5px;
+        box-shadow: 0 5px 15px rgba(0,0,0,0.1);
+    }
+
+    .avatar-img {
+        width: 100%;
+        height: 100%;
+        border-radius: 50%;
+        background: linear-gradient(135deg, #fdfbfb 0%, #ebedee 100%);
+        color: #0061ff; /* İkon rengi mavi */
+        font-size: 3rem;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-weight: bold;
+    }
+
+    .info-row {
+        background: #f8f9fa;
+        border-radius: 12px;
+        padding: 12px 15px;
+        margin-bottom: 12px;
+        display: flex;
+        align-items: center;
+        border-left: 4px solid #0061ff; /* Sol çizgi mavi */
+        transition: background 0.2s;
+    }
+    .info-row:hover { background: #f1f3f5; }
+
+    /* Sağ Form Tasarımı */
+    .form-header-icon {
+        width: 50px;
+        height: 50px;
+        background: rgba(0, 97, 255, 0.1); /* Açık mavi zemin */
+        color: #0061ff; /* Koyu mavi ikon */
+        border-radius: 12px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 1.5rem;
+        margin-bottom: 15px;
+    }
+
+    /* Modern İkonlu Inputlar */
+    .input-group-modern {
+        background: #f8f9fa;
+        border-radius: 12px;
+        border: 2px solid transparent;
+        transition: all 0.3s ease;
+        overflow: hidden;
+    }
+
+    .input-group-modern:focus-within {
+        background: #fff;
+        border-color: #0061ff; /* Odaklanınca mavi çerçeve */
+        box-shadow: 0 0 0 4px rgba(0, 97, 255, 0.1);
+    }
+
+    .icon-wrapper {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        width: 50px;
+        color: #adb5bd;
+        font-size: 1.1rem;
+    }
+
+    .input-modern {
+        border: none;
+        background: transparent;
+        padding: 15px 10px 15px 0;
+        width: 100%;
+        outline: none;
+        color: #495057;
+        font-weight: 500;
+    }
+    
+    .input-modern::placeholder { color: #ced4da; font-weight: 400; }
+
+    .form-label-modern {
+        font-size: 0.85rem;
+        font-weight: 700;
+        color: #6c757d;
+        text-transform: uppercase;
+        margin-bottom: 8px;
+        letter-spacing: 0.5px;
+    }
+
+    /* Buton - MAVİ GRADIENT */
+    .btn-gradient {
+        background: linear-gradient(135deg, #0061ff 0%, #60efff 100%);
+        border: none;
+        color: white;
+        padding: 15px 30px;
+        border-radius: 12px;
+        font-weight: 600;
+        letter-spacing: 0.5px;
+        box-shadow: 0 10px 20px rgba(0, 97, 255, 0.3);
+        transition: transform 0.2s, box-shadow 0.2s;
+    }
+    .btn-gradient:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 15px 30px rgba(0, 97, 255, 0.4);
+        color: white;
+    }
+
+</style>
+
+<div class="container mt-5 mb-5">
+    <div class="row g-4">
+        
+        <div class="col-lg-4 animate-enter">
+            <div class="premium-card">
+                <div class="profile-cover"></div>
+                
+                <div class="avatar-box">
+                    <div class="avatar-circle">
+                        <div class="avatar-img">
+                            {{ user.username|first|upper }}
+                        </div>
+                    </div>
+                </div>
+
+                <div class="text-center px-4 pb-5 pt-3">
+                    <h3 class="fw-bold text-dark mb-1">{{ user.first_name }} {{ user.last_name }}</h3>
+                    <div class="badge bg-light text-secondary border px-3 py-2 rounded-pill mb-4">
+                        @{{ user.username }}
+                    </div>
+
+                    <div class="text-start">
+                        <div class="info-row">
+                            <i class="fas fa-graduation-cap me-3 text-primary fa-lg"></i>
+                            <div>
+                                <small class="text-muted d-block" style="font-size: 0.7rem;">BÖLÜM</small>
+                                <span class="fw-bold text-dark">{{ student.department|default:"Kayıtlı Bölüm Yok" }}</span>
+                            </div>
+                        </div>
+
+                        <div class="info-row" style="border-left-color: #20c997;">
+                            <i class="fas fa-id-badge me-3 text-success fa-lg"></i>
+                            <div>
+                                <small class="text-muted d-block" style="font-size: 0.7rem;">ÖĞRENCİ NUMARASI</small>
+                                <span class="fw-bold text-dark">{{ student.student_id }}</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-lg-8 animate-enter" style="animation-delay: 0.1s;">
+            <div class="premium-card p-5">
+                
+                <div class="d-flex align-items-center mb-4 pb-3 border-bottom">
+                    <div class="form-header-icon me-3">
+                        <i class="fas fa-lock"></i>
+                    </div>
+                    <div>
+                        <h4 class="fw-bold text-dark mb-0">Güvenlik ve Şifre</h4>
+                        <p class="text-muted mb-0 small">Hesap güvenliğiniz için şifrenizi güncelleyin.</p>
+                    </div>
+                </div>
+
+                <form method="POST">
+                    {% csrf_token %}
+                    
+                    <div class="mb-4">
+                        <label class="form-label-modern">Mevcut Şifre</label>
+                        <div class="input-group-modern d-flex">
+                            <div class="icon-wrapper">
+                                <i class="fas fa-key"></i>
+                            </div>
+                            <input type="password" name="old_password" class="input-modern" placeholder="Şu anki şifrenizi girin">
+                        </div>
+                        {% if password_form.old_password.errors %}
+                            <div class="text-danger small mt-2 fw-bold">
+                                <i class="fas fa-times-circle me-1"></i>Mevcut şifreniz hatalı.
+                            </div>
+                        {% endif %}
+                    </div>
+
+                    <div class="row">
+                        <div class="col-md-6 mb-4">
+                            <label class="form-label-modern">Yeni Şifre</label>
+                            <div class="input-group-modern d-flex">
+                                <div class="icon-wrapper">
+                                    <i class="fas fa-unlock-alt"></i>
+                                </div>
+                                <input type="password" name="new_password1" class="input-modern" placeholder="En az 8 karakter">
+                            </div>
+                             {% if password_form.new_password1.errors %}
+                                <div class="text-danger small mt-2">
+                                    {{ password_form.new_password1.errors.as_text }}
+                                </div>
+                            {% endif %}
+                        </div>
+
+                        <div class="col-md-6 mb-4">
+                            <label class="form-label-modern">Yeni Şifre (Tekrar)</label>
+                            <div class="input-group-modern d-flex">
+                                <div class="icon-wrapper">
+                                    <i class="fas fa-check-circle"></i>
+                                </div>
+                                <input type="password" name="new_password2" class="input-modern" placeholder="Şifreyi onaylayın">
+                            </div>
+                             {% if password_form.new_password2.errors %}
+                                <div class="text-danger small mt-2 fw-bold">
+                                    <i class="fas fa-times-circle me-1"></i>Şifreler eşleşmiyor.
+                                </div>
+                            {% endif %}
+                        </div>
+                    </div>
+                    
+                    <div class="alert alert-light border-0 bg-light rounded-3 p-3 mb-4 d-flex align-items-center">
+                        <i class="fas fa-shield-alt text-primary fa-lg me-3"></i>
+                        <small class="text-muted">Güvenliğiniz için büyük harf, sayı ve özel karakter kullanmanızı öneririz.</small>
+                    </div>
+
+                    <div class="d-flex justify-content-end">
+                        <button type="submit" class="btn btn-gradient">
+                            <i class="fas fa-save me-2"></i>Değişiklikleri Kaydet
+                        </button>
+                    </div>
+
+                </form>
+            </div>
+        </div>
+
+    </div>
+</div>
+
+{% endblock %}
