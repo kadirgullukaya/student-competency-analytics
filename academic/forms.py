@@ -10,6 +10,7 @@ from .models import (
     Student,
     Course,
     Semester,
+    Department, # <--- YENİ EKLENDİ
 )
 
 # --- BÖLÜM BAŞKANI İÇİN YENİ FORMLAR (YÖNETİM) ---
@@ -20,8 +21,16 @@ class StudentCreationForm(forms.ModelForm):
     first_name = forms.CharField(label="Ad", max_length=30)
     last_name = forms.CharField(label="Soyad", max_length=30)
     email = forms.EmailField(label="E-posta", required=True)
-    # DÜZELTME: Modeldeki 'student_id' alanıyla eşleşmesi için isim güncellendi
     student_id = forms.CharField(label="Öğrenci Numarası", max_length=20)
+    
+    # 🔥 YENİ EKLENEN: Bölüm Seçimi
+    department = forms.ModelChoiceField(
+        queryset=Department.objects.all(),
+        required=False,
+        label="Bölüm",
+        empty_label="Bölüm Seçiniz (Opsiyonel)"
+    )
+    
     password = forms.CharField(label="Şifre", widget=forms.PasswordInput)
 
     class Meta:
@@ -31,7 +40,12 @@ class StudentCreationForm(forms.ModelForm):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         for field in self.fields:
+            # Checkbox hariç diğerlerine form-control, checkbox varsa form-check-input (gerçi burada yok)
             self.fields[field].widget.attrs.update({"class": "form-control"})
+            
+            # Select kutusu (Bölüm) için Bootstrap stili
+            if field == 'department':
+                self.fields[field].widget.attrs.update({"class": "form-select"})
 
     def save(self, commit=True):
         # 1. Önce Django User oluştur
@@ -43,12 +57,12 @@ class StudentCreationForm(forms.ModelForm):
         if commit:
             user.save()
             # 2. Sonra Student profilini oluştur ve bağla
-            # DÜZELTME: Model alanı 'student_id' olduğu için burası düzeltildi
             Student.objects.create(
                 user=user,
                 student_id=self.cleaned_data["student_id"],
                 first_name=self.cleaned_data["first_name"],
                 last_name=self.cleaned_data["last_name"],
+                department=self.cleaned_data["department"], # 🔥 Kayıt sırasında bölümü de ekle
             )
         return user
 
@@ -77,7 +91,6 @@ class CourseForm(forms.ModelForm):
 class SemesterForm(forms.ModelForm):
     class Meta:
         model = Semester
-        # DÜZELTME: Modelde olmayan 'year' ve 'term' alanları kaldırıldı.
         fields = ["name"]
         labels = {
             "name": "Dönem Adı (Örn: 2024-2025 Güz)",

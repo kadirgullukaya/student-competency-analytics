@@ -1,5 +1,14 @@
 from django.db import models
 from django.contrib.auth.models import User
+from django.core.validators import MinValueValidator, MaxValueValidator
+
+
+# --- 0. YENİ EKLENEN: BÖLÜM MODELİ ---
+class Department(models.Model):
+    name = models.CharField(max_length=100, unique=True, verbose_name="Bölüm Adı")
+
+    def __str__(self):
+        return self.name
 
 
 # 1. TEMEL MODELLER (OBS Parçaları)
@@ -13,6 +22,9 @@ class Semester(models.Model):
 class Student(models.Model):
     # Bu satır öğrenciyi giriş yapan kullanıcıya bağlar
     user = models.OneToOneField(User, on_delete=models.CASCADE, null=True, blank=True)
+    
+    # 🔥 YENİ EKLENEN: Bölüm İlişkisi
+    department = models.ForeignKey(Department, on_delete=models.SET_NULL, null=True, blank=True, verbose_name="Bölüm")
 
     student_id = models.CharField(max_length=20, unique=True)
     first_name = models.CharField(max_length=50)
@@ -121,10 +133,8 @@ class Enrollment(models.Model):
     def __str__(self):
         return f"{self.student.first_name} -> {self.course.code}"
 
-from django.db import models
-from django.contrib.auth.models import User
-from django.core.validators import MinValueValidator, MaxValueValidator
 
+# --- MEVCUT ESKİ KODLAR (Lesson, Grade) ---
 class Lesson(models.Model):
     code = models.CharField(max_length=10, unique=True, verbose_name="Ders Kodu")
     name = models.CharField(max_length=100, verbose_name="Ders Adı")
@@ -150,24 +160,21 @@ class Grade(models.Model):
     )
     
     class Meta:
-        unique_together = ('student', 'lesson') # Bir öğrencinin aynı dersten sadece bir not kaydı olabilir.
+        unique_together = ('student', 'lesson')
         verbose_name = "Not"
         verbose_name_plural = "Notlar"
 
-    # Ortalama Hesaplama (Property olarak)
     @property
     def average(self):
         if self.midterm is None or self.final is None:
-            return None # Notlar tam girilmediyse
+            return None
         
-        # Örnek: Vize %40, Final %60
         avg = (self.midterm * 0.4) + (self.final * 0.6)
         return round(avg, 2)
 
-    # Geçti/Kaldı Durumu
     @property
     def status(self):
         avg = self.average
         if avg is None:
             return "Devam Ediyor"
-        return "Geçti" if avg >= 50 else "Kaldı" # Geçme notu 50 kabul edildi
+        return "Geçti" if avg >= 50 else "Kaldı"
