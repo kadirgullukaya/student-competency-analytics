@@ -80,13 +80,33 @@ def teacher_dashboard_home(request):
 @login_required
 @user_passes_test(is_teacher)
 def teacher_courses(request):
+    # 1. Hangi dersleri göstereceğimizi belirle
     if is_department_head(request.user):
         my_courses = Course.objects.all()
     else:
         my_courses = Course.objects.filter(teacher=request.user)
 
+    # 2. İSTATİSTİKLERİ HESAPLA (Eksik olan kısım burasıydı)
+    total_courses = my_courses.count()
+
+    # Tüm derslerdeki tekil öğrenci sayısı
+    total_students = (
+        Enrollment.objects.filter(course__in=my_courses)
+        .values("student")
+        .distinct()
+        .count()
+    )
+
+    # Toplam sınav sayısı
+    total_exams = Assessment.objects.filter(course__in=my_courses).count()
+
     context = {
         "courses": my_courses,
+        "stats": {
+            "total_courses": total_courses,
+            "total_students": total_students,
+            "total_exams": total_exams,
+        },
     }
     return render(request, "teacher_courses.html", context)
 
@@ -252,7 +272,31 @@ def delete_student(request, student_id):
 @user_passes_test(is_department_head)
 def manage_courses(request):
     courses = Course.objects.all().select_related("teacher", "semester")
-    return render(request, "manage_courses.html", {"courses": courses})
+
+    # --- EKLENEN KISIM: İSTATİSTİKLER ---
+    # 1. Toplam Ders Sayısı
+    total_courses = courses.count()
+
+    # 2. Toplam Öğrenci Sayısı (Tüm derslere kayıtlı tekil öğrenci sayısı)
+    total_students = (
+        Enrollment.objects.filter(course__in=courses)
+        .values("student")
+        .distinct()
+        .count()
+    )
+
+    # 3. Toplam Sınav Sayısı
+    total_exams = Assessment.objects.filter(course__in=courses).count()
+
+    context = {
+        "courses": courses,
+        "stats": {
+            "total_courses": total_courses,
+            "total_students": total_students,
+            "total_exams": total_exams,
+        },
+    }
+    return render(request, "manage_courses.html", context)
 
 
 @login_required
