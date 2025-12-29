@@ -45,11 +45,11 @@ def is_teacher(user):
 
 
 def is_department_head(user):
-    # Sadece Bölüm Başkanı (veya Superuser) girebilir
+    # Sadece Bölüm Başkanı ya da superuser girebilir
     return user.groups.filter(name="Bölüm Başkanı").exists() or user.is_superuser
 
 
-# --- 1. ANA PANEL (GENEL BAKIŞ) ---
+#  ANA PANEL (GENEL BAKIŞ) 
 @login_required
 @user_passes_test(is_teacher)
 def teacher_dashboard_home(request):
@@ -63,14 +63,13 @@ def teacher_dashboard_home(request):
 
     total_courses = my_courses.count()
 
-    # --- DÜZELTME YAPILDI: ARTIK TEKİL ÖĞRENCİLERİ SAYIYOR ---
+    # DÜZELTME YAPILDI: ARTIK TEKİL ÖĞRENCİLERİ SAYIYOR 
     total_students = (
         Enrollment.objects.filter(course__in=my_courses)
         .values("student")  # Sadece öğrenci ID'lerini al
         .distinct()  # Aynı ID'yi birden fazla sayma
         .count()
     )
-    # ---------------------------------------------------------
 
     total_exams = Assessment.objects.filter(course__in=my_courses).count()
     recent_exams = Assessment.objects.filter(course__in=my_courses).order_by("-date")[
@@ -124,7 +123,7 @@ def teacher_courses(request):
     return render(request, "teacher_courses.html", context)
 
 
-# --- 3. DERS DASHBOARD (GRAFİKLİ) ---
+#  DERS DASHBOARD (GRAFİKLİ) 
 @login_required
 @user_passes_test(is_teacher)
 def course_dashboard(request, course_id):
