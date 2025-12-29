@@ -42,6 +42,9 @@
             background: var(--sidebar-bg);
             color: #fff;
             transition: all 0.3s;
+            /* DEĞİŞİKLİK: Flex yapısı eklenerek alt kısım kontrol edilebilir hale getirildi */
+            display: flex;
+            flex-direction: column;
         }
         
         #sidebar .sidebar-header {
@@ -50,9 +53,10 @@
             border-bottom: 1px solid #465a6e;
         }
 
+        /* DEĞİŞİKLİK: Menü öğelerinin kapsayıcısı esnek yapıldı */
         #sidebar ul.components {
             padding: 20px 0;
-            border-bottom: 1px solid #47748b;
+            margin-bottom: 0; /* Bootstrap default margin'i sıfırla */
         }
 
         #sidebar ul li a {
@@ -81,6 +85,13 @@
             margin-right: 10px;
             width: 20px;
             text-align: center;
+        }
+
+        /* ALT MENÜ (Ayarlar ve Çıkış) */
+        .sidebar-bottom {
+            margin-top: auto; /* Flex container içinde en alta iter */
+            border-top: 1px solid #465a6e;
+            background: rgba(0,0,0,0.1);
         }
 
         /* Buton linkler (Çıkış vb.) */
@@ -156,7 +167,14 @@
 <div class="wrapper">
     <nav id="sidebar">
         <div class="sidebar-header">
-            <h5 class="m-0"><i class="fas fa-university me-2"></i>Akademik OBS</h5>
+            <h5 class="m-0" style="font-size: 1.1rem; line-height: 1.4;">
+                <i class="fas fa-university me-2"></i>
+                {% if user.is_superuser or "Öğretmen" in user.groups.all|join:"," or "Bölüm Başkanı" in user.groups.all|join:"," %}
+                    Akademisyen Bilgi Sistemi
+                {% else %}
+                    Öğrenci Bilgi Sistemi
+                {% endif %}
+            </h5>
         </div>
 
         <ul class="list-unstyled components">
@@ -218,8 +236,10 @@
                     </a>
                 </li>
             {% endif %}
+        </ul>
 
-            <li style="margin-top: 30px; border-top: 1px solid #34495e;">
+        <ul class="list-unstyled sidebar-bottom pb-3">
+            <li>
                 <a href="{% if user.is_superuser or 'Öğretmen' in user.groups.all|join:',' or 'Bölüm Başkanı' in user.groups.all|join:',' %}{% url 'teacher_settings' %}{% else %}{% url 'student_settings' %}{% endif %}"
                    class="{% if request.resolver_match.url_name == 'student_settings' or request.resolver_match.url_name == 'teacher_settings' %}active{% endif %}">
                     <i class="fas fa-cog"></i> Ayarlar
