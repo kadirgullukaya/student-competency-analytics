@@ -54,7 +54,7 @@ SOFTWAREPROJECT/
 │   └── views.py               # İş Mantığı ve Görünümler
 ├── manage.py                  # Django Komut Satırı Aracı
 └── requirements.txt           # Bağımlılıklar
-
+```
 
 
 
