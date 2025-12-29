@@ -14,7 +14,7 @@ from .models import (
 )
 
 
-# Aöğrenci oluşturma arayüzü
+# öğrenci oluşturma arayüzü
 class StudentCreationForm(forms.ModelForm):
     first_name = forms.CharField(label="Ad", max_length=30)
     last_name = forms.CharField(label="Soyad", max_length=30)

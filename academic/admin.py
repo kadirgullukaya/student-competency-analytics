@@ -13,7 +13,7 @@ from .models import (
     Enrollment,
 )
 
-#Bölüm Yönetimi
+#Bölüm Yönetimi Gösterimi
 @admin.register(Department)
 class DepartmentAdmin(admin.ModelAdmin):
     list_display = ('name',)

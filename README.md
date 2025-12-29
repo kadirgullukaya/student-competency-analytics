@@ -10,7 +10,7 @@ Bu proje, öğrencilerin sadece sınav puanlarını değil; **Program Çıktıla
 ## 🔐 Temel Özellikler
 
 ### 🏛️ Bölüm Başkanı Paneli (Yönetici)
-* **Müfredat Yönetimi**: Dönem, Ders ve Bölüm tanımlamaları.
+* **Müfredat Yönetimi**: Dönem, Ders ve Bölüm tanımlamaları. Gerekli dersler eklenir.
 * **Çıktı Tanımlama**: Bölümün vizyonuna uygun Program Çıktılarını (PO) belirleme.
 * **Genel Bakış**: Toplam öğrenci, aktif ders ve sınav istatistiklerini dashboard üzerinden izleme.
 * **Kullanıcı Yönetimi**: Akademisyen ve öğrenci kayıtlarını yönetme.
@@ -18,7 +18,7 @@ Bu proje, öğrencilerin sadece sınav puanlarını değil; **Program Çıktıla
 ### 👨‍🏫 Öğretmen Paneli
 * **LO Yönetimi**: Derslere özel Öğrenme Çıktıları (LO) oluşturma.
 * **Sınav Kurgusu**: Sınav sorularını ilgili LO'lar ile eşleştirme ve ağırlıklandırma.
-* **Analiz**: Dersi alan öğrencilerin başarı dağılımını grafiklerle inceleme.
+* **Analiz**: Dersi alan öğrencilerin başarı dağılımını grafiklerle inceleme. Eksik yönlerini gösterme ve geliştirme imkanı sunma.
 
 ### 👨‍🎓 Öğrenci Paneli
 * **Yetkinlik Karnesi**: Klasik transkript yerine, hangi yetkinlikte ne kadar güçlü olduğunu gösteren Radar Grafikleri.
